@@ -20,8 +20,6 @@ const StartBtn = (props: IStartButton) => {
 
 
   useEffect(() => {
-    console.log("isHost: " + props.isHost);
-    console.log("isReady " + props.isReady)
     if (props.isHost) {
       setBtnText('Start');
       if (props.isReady) {
@@ -43,7 +41,7 @@ const StartBtn = (props: IStartButton) => {
 
   return (
     <div className={className + 'font-LuckiestGuy text-[30px]  text-white border cursor-pointer'}>
-      <div className='bg-lblue bg-lgray'></div>
+      <div className='bg-lblue bg-lgray bg-dblue'></div>
       {btnText}
     </div>
   )

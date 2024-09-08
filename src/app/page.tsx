@@ -1,5 +1,7 @@
 'use client'
 import GoHomeBtn from "@/components/GoHomeBtn";
+import { createRoom, joinRoom } from "@/utils/dataServices";
+import { removeSpaces } from "@/utils/utilities";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,7 +19,6 @@ export default function Home() {
   const router = useRouter()
 
 
-
   useEffect(() => {
     if (room) {
       setRoomName(room);
@@ -33,10 +34,10 @@ export default function Home() {
     }
   }
 
-  const handleOnClickJoin = (LobbyName: string, userName: string) => {
-    
+  const handleOnClickJoin = async (LobbyName: string, userName: string) => {
+
     setDisableBtn(true)
-    if(userName === ''){
+    if (userName === '') {
       setWarnText('Please enter in your name.')
       setSuccessColor(false)
     }
@@ -46,14 +47,16 @@ export default function Home() {
     } else {
       sessionStorage.setItem("Username", userName)
       sessionStorage.setItem("isHost", 'false')
+      let msg = await joinRoom({ userName: userName, roomName: LobbyName });
+      console.log(msg);
       router.push(`/${LobbyName}`);
     }
   };
 
-  const handleOnClickCreate = (LobbyName: string, userName: string) => {
+  const handleOnClickCreate = async (LobbyName: string, userName: string) => {
 
     setDisableBtn(true)
-    if(userName === ''){
+    if (userName === '') {
       setWarnText('Please enter in your name.')
       setSuccessColor(false)
     }
@@ -63,9 +66,12 @@ export default function Home() {
     } else {
       sessionStorage.setItem("Username", userName)
       sessionStorage.setItem("isHost", 'true')
+      let msg = await createRoom({ userName: userName, roomName: LobbyName })
+      console.log(msg);
       router.push(`/${LobbyName}`);
     }
   };
+
 
   useEffect(() => {
     setWarnText('');
@@ -100,12 +106,12 @@ export default function Home() {
           <div className='flex flex-col  justify-center items-center space-y-5'>
 
             {/* On click create room */}
-            <button onClick={() => handleOnClickJoin(roomName, name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
+            <button onClick={() => handleOnClickJoin(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
               <p className='sm:text-[36px] text-[28px] tracking-widest'>
                 JOIN
               </p>
             </button>
-            <button onClick={() => handleOnClickCreate(roomName, name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
+            <button onClick={() => handleOnClickCreate(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
               <p className='sm:text-[36px] text-[28px] tracking-widest'>
                 CREATE
               </p>
