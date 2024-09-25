@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image';
-import GreenArrow from '@/app/assets/GreenArrow.png'
+import GreenArrow from '../assets/GreenArrow.png'
 
 const OnePointBtn = ({onClick} : {onClick:()=>void}) => {
   return (

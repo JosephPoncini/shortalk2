@@ -1,11 +1,11 @@
 
 import React from 'react'
 import Image from 'next/image';
-import checkMarck from '@/assets/ImReadyCheckMark.png'
-import topHat from '@/assets/ShortalkLogoTopHat.png'
-import trash from '@/assets/Trash.png'
-import buzzable from '@/assets/Buzzable.png'
-import nonbuzzable from '@/assets/Nonbuzzable.png'
+import checkMarck from '../assets/ImReadyCheckMark.png'
+import topHat from '../assets/ShortalkLogoTopHat.png'
+import trash from '../assets/Trash.png'
+import buzzable from '../assets/Buzzable.png'
+import nonbuzzable from '../assets/Nonbuzzable.png'
 
 interface IOnlineTeam {
   teamName: string;

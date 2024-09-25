@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image';
-import Angry from '@/app/assets/SmileyAngry.png'
+import Angry from '../assets/SmileyAngry.png'
 
 const BuzzBtn = ({onClick} : {onClick:()=>void}) => {
   return (

@@ -6,6 +6,8 @@ import DiceBtn from '@/components/DiceBtn'
 import NavBar from '@/components/NavBar'
 import OnePointBtn from '@/components/OnePointBtn'
 import OnlineTeamName from '@/components/OnlineTeamName'
+import PlayAgainBtn from '@/components/PlayAgainBtn'
+import ScoreTable from '@/components/ScoreTable'
 import ShuffleBtn from '@/components/Shufflebtn'
 import SkipBtn from '@/components/SkipBtn'
 import StartBtn from '@/components/StartBtn'
@@ -19,6 +21,11 @@ import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signal
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
+interface ICard {
+  top: string
+  bottom: string
+}
+
 const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const url = 'http://localhost:5051/Game';
@@ -30,7 +37,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const maxMinutes: number = 5;
   const maxSeconds: number = 59;
 
-  const [gamePhase, setGamePhase] = useState<string>("game")
+  const [gamePhase, setGamePhase] = useState<string>("endOfGame")
 
   //lobby UseStates
 
@@ -63,10 +70,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const [onePointWordHasBeenSaid, setOnePointWordHasBeenSaid] = useState<boolean>();
   const [threePointWordHasBeenSaid, setThreePointWordHasBeenSaid] = useState<boolean>();
 
-  const [buzzWords, setBuzzWords] = useState<string>('')
-  const [onePointWords, setOnePointWords] = useState<string>('')
-  const [threePointWords, setThreePointWords] = useState<string>('')
-  const [skipWords, setSkipWords] = useState<string>('')
+  const [buzzWords, setBuzzWords] = useState<ICard[]>([])
+  const [onePointWords, setOnePointWords] = useState<ICard[]>([])
+  const [threePointWords, setThreePointWords] = useState<ICard[]>([])
+  const [skipWords, setSkipWords] = useState<ICard[]>([])
 
   const [guess, setGuess] = useState<string>('')
   const [guesses, setGuesses] = useState<{ username: string; msg: string; color: string }[]>([]);
@@ -397,27 +404,31 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       </div>
     )
   }
-  else {
+  else if (gamePhase == "game") {
     return (
-      <div className='h-[90.75%]'>
-        <div className='p-5 pt-10'>
-          {Object.keys(gameInfo).length > 0 && (
-            <StatusBar
-              time={0}
-              teamName=''
-              user={username}
-              roundNumber={round}
-              roundTotal={roundTotal}
-              role={role}
-              OnePointWord={onePointWordHasBeenSaid ? onePointWord : '???'}
-              ThreePointWord={threePointWordHasBeenSaid ? threePointWord : '???'}
-              // OnePointWord={""}
-              // ThreePointWord={""}
-              Speaker={speaker}
-            />
-          )}
+
+      <div className='flex flex-col justify-between h-screen items-center'>
+
+        <div className='relative w-full'>
+          <NavBar title={"Shortalk: " + params['lobby-name']} />
         </div>
-        <div className='grid md:grid-cols-3 gap-5 px-5 pb-5 '>
+
+        <div className='p-5 pt-10 w-full'>
+          <StatusBar
+            time={0}
+            teamName=''
+            user={username}
+            roundNumber={round}
+            roundTotal={roundTotal}
+            role={role}
+            OnePointWord={onePointWordHasBeenSaid ? onePointWord : '???'}
+            ThreePointWord={threePointWordHasBeenSaid ? threePointWord : '???'}
+            // OnePointWord={""}
+            // ThreePointWord={""}
+            Speaker={speaker}
+          />
+        </div>
+        <div className='grid md:grid-cols-3 gap-5 px-5 pb-5 w-full '>
 
           {/* This is the Guesser box */}
           <div className='bg-white rounded-lg flex flex-col justify-between'>
@@ -469,7 +480,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                 </div>
                 : role == 'Defense' ?
                   <div className={`flex justify-center py-5`}>
-                    <BuzzBtn onClick={() => { setBuzzed(true); setOpenBuzzModal(true); handleBuzz() }} />
+                    <BuzzBtn onClick={() => { }} />
                   </div>
                   :
                   <div className=' my-5 h-[75px]'>
@@ -505,6 +516,99 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
         </div>
       </div>
+    )
+  }
+  else if (gamePhase == "scoreBoard") {
+    return (
+      <div>
+        <div className='text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest pt-20'>
+          <p>Times Up!!!</p>
+          <p className='pt-5'>Turn results</p>
+        </div>
+        <ScoreTable
+          skipWords={skipWords}
+          buzzWords={buzzWords}
+          onePointWords={onePointWords}
+          threePointWords={threePointWords}
+        />
+        {/* {
+          ((turnNumber-1)%(2*Math.max(Team1NameList.length, Team2NameList.length)) == 0)
+              ? <div className='flex justify-center pb-16'>
+                  <ResultsBtn click={clickHandleResultsBtn} />
+              </div>
+              : <div className='flex justify-center pb-16'>
+                  <NextTurnBtn click={clickHandleNextTurn}/>
+              </div>
+      } */}
+
+      </div>
+    )
+  }
+  else if (gamePhase == "intermission") {
+    return (
+      <div className='flex flex-col justify-center h-screen items-center'>
+        <div className=' text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>Waiting on other players... (5/6)</div>
+      </div>
+    )
+  }
+  else if (gamePhase == "endOfGame") {
+    return (
+      <div className='font-LuckiestGuy tracking-widest'>
+        <div className='text-center pt-32 pb-16 text-[50px] text-dblue flex flex-col'>
+          {/* {
+            Team1Score > Team2Score
+              ? <p>{Team1Name} WINS</p>
+              : Team2Score > Team1Score
+                ? <p>{Team2Name} WINS</p>
+                : <p>{"IT'S A TIE!"}</p>
+          } */}
+          <p>Final Score</p>
+        </div>
+        <div className='grid grid-cols-1'>
+
+          <div className='flex justify-center'>
+            <div className='flex justify-center bg-white border-[1px] border-black text-[48px] sm:w-[60%] w-full'>
+              <div className='grid md:grid-cols-2 grid-cols-1 py-10 w-[100%] sm:px-16 px-5'>
+                <div className='md:text-start text-center'>
+                  Team 1:
+                </div>
+                <div className='md:text-end text-center'>
+                  {/* {Team1Score} */}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className='flex justify-center'>
+            <div className='flex justify-center bg-white border-[1px] border-black text-[48px] sm:w-[60%] w-full'>
+              <div className='grid md:grid-cols-2 grid-cols-1 py-10 w-[100%] sm:px-16 px-5'>
+                <div className='md:text-start text-center'>
+                  Team 2:
+                </div>
+                <div className='md:text-end text-center'>
+                  {/* {Team2Score} */}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* <div className={`pt-10 ${showText ? 'block' : 'hidden'}`}>
+            <p className='text-center text-green text-[25px]'>
+              Taking you back for another game...
+            </p>
+          </div> */}
+
+          {/* push to whatever page is next */}
+          <div onClick={()=>{}} className='flex justify-center py-16 cursor-pointer'>
+            <PlayAgainBtn />
+          </div>
+        </div>
+      </div>
+    )
+  }
+  else {
+    return (
+      <div>Ummmm... Something went wrong</div>
     )
   }
 

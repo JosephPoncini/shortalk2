@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import cardBack from '@/app/assets/CardBack.png'
+import cardBack from '../assets/CardBack.png'
 
 interface ICard {
   top: string

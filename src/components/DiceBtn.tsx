@@ -1,5 +1,5 @@
 import React from 'react'
-import dice from '@/assets/Dice.png'
+import dice from '../assets/Dice.png'
 import Image from 'next/image';
 
 interface IDice {

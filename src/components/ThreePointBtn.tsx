@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image';
-import PinkArrow from '@/app/assets/PinkArrow.png'
+import PinkArrow from '../assets/PinkArrow.png'
 
 const ThreePointBtn = ({onClick} : {onClick:()=>void}) => {
   return (

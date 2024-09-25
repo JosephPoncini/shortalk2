@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image';
-import GrayArrow from '@/app/assets/GrayArrow.png'
+import GrayArrow from '../assets/GrayArrow.png'
 
 
 const SkipBtn = ( {onClick} : {onClick:()=>void}) => {
