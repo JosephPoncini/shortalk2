@@ -95,3 +95,8 @@ export interface IChangeNumOfRoundsRequest {
     roomName: string
     numberOfRounds: number
 }
+
+export interface IChangeGamePhaseRequest {
+    roomName: string
+    gamePhase: string
+}

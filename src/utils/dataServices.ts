@@ -1,5 +1,5 @@
 import { request } from "http";
-import { GameModel, IChangeNumOfRoundsRequest, IChangeTimeLimitRequest, ILobbyRequest, IReadyStatusRequest, IRemovePlayerRequest } from "./interefaces";
+import { GameModel, IChangeGamePhaseRequest, IChangeNumOfRoundsRequest, IChangeTimeLimitRequest, ILobbyRequest, IReadyStatusRequest, IRemovePlayerRequest } from "./interefaces";
 
 const url = 'http://localhost:5051/Game/';
 
@@ -57,6 +57,13 @@ export const getNumOfRoundsByRoom = async (roomName: string) => {
 
 export const getHostByRoom = async (roomName: string) => {
     const promise = await fetch(url + `getHostByRoom/${roomName}`)
+    const result = await promise.text();
+
+    return result
+}
+
+export const getGamePhaseByRoom = async (roomName: string) => {
+    const promise = await fetch(url + `getGamePhaseByRoom/${roomName}`)
     const result = await promise.text();
 
     return result
@@ -133,3 +140,15 @@ export const removePlayer = async (requestBody: IRemovePlayerRequest) => {
     const result = await promise.text();
     return result;
 }
+
+export const changeGamePhase = async (requestBody: IChangeGamePhaseRequest) => {
+    const promise = await fetch(url + 'changeGamePhase', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+    const result = await promise.text();
+    return result;
+};

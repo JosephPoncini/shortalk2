@@ -7,19 +7,20 @@ import NavBar from '@/components/NavBar'
 import OnePointBtn from '@/components/OnePointBtn'
 import OnlineTeamName from '@/components/OnlineTeamName'
 import PlayAgainBtn from '@/components/PlayAgainBtn'
+import ReadyBtn from '@/components/ReadyBtn'
 import ScoreTable from '@/components/ScoreTable'
 import ShuffleBtn from '@/components/Shufflebtn'
 import SkipBtn from '@/components/SkipBtn'
 import StartBtn from '@/components/StartBtn'
 import StatusBar from '@/components/StatusBar'
 import ThreePointBtn from '@/components/ThreePointBtn'
-import { changeNumberOfRounds, changeTimeLimit, getGamebyRoomName, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, removePlayer, setReadyStatus, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
-import { RefreshRounds, RefreshTeams, RefreshTime, sendMessage } from '@/utils/hubServices'
+import { changeGamePhase, changeNumberOfRounds, changeTimeLimit, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, removePlayer, setReadyStatus, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
+import { RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage } from '@/utils/hubServices'
 import { ITeamsInfo, members } from '@/utils/interefaces'
 import { checkPlayersReadiness, extractTeam1members, extractTeam2members, renderOptions } from '@/utils/utilities'
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { useRouter } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
 interface ICard {
   top: string
@@ -37,12 +38,13 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const maxMinutes: number = 5;
   const maxSeconds: number = 59;
 
-  const [gamePhase, setGamePhase] = useState<string>("endOfGame")
+  const [gamePhase, setGamePhase] = useState<string>("lobby")
 
   //lobby UseStates
 
   const [conn, setConnection] = useState<HubConnection>()
   const [isReady, setIsReady] = useState<boolean>(false);
+  const [isLobbyReady, setIsLobbyReady] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('')
   const [messages, setMessages] = useState<{ username: string; msg: string; }[]>([]);
 
@@ -60,9 +62,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   //game UseStates
 
+  const inputRefGuesserBox = useRef<HTMLInputElement | null>(null);
+
   const [round, setRound] = useState<number>(0);
   const [roundTotal, setRoundTotal] = useState<number>(0);
-  const [role, setRole] = useState<string>('');
+  const [role, setRole] = useState<string>('Defense');
   const [onePointWord, setOnePointWord] = useState<string>('');
   const [threePointWord, setThreePointWord] = useState<string>('');
   const [speaker, setSpeaker] = useState<string>('');
@@ -124,16 +128,20 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
 
   const handleShuffle = async () => {
-    let msg = username && await shuffleTeams({ userName: username, roomName: lobby });
-    console.log(msg);
-    conn && username && RefreshTeams(conn, username, lobby, "shuffled");
+    if (!isReady) {
+      let msg = username && await shuffleTeams({ userName: username, roomName: lobby });
+      console.log(msg);
+      conn && username && RefreshTeams(conn, username, lobby, "shuffled");
+    }
+
   }
 
   const handleToggleTeam = async () => {
-
-    let msg = username && await toggleTeamFetch({ userName: username, roomName: lobby });
-    console.log(msg);
-    conn && username && RefreshTeams(conn, username, lobby, "swapped teams");
+    if (!isReady) {
+      let msg = username && await toggleTeamFetch({ userName: username, roomName: lobby });
+      console.log(msg);
+      conn && username && RefreshTeams(conn, username, lobby, "swapped teams");
+    }
   }
 
   const handleChangeRounds = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -161,6 +169,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
 
   const handleStartClick = async () => {
+
+    if (isLobbyReady) {
+      let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+      console.log(msg);
+      conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+    }
+  }
+
+  const handleReadyClick = async () => {
     setIsReady(!isReady);
   }
 
@@ -178,16 +195,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   // Handle Functions Game Room
 
-  // const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-  //   // if (event.key === 'Enter') {
-  //   //   if (guess !== '') {
-  //   //     SubmitGuess(onePointWord, threePointWord, guess);
-  //   //     setGuess('');
-  //   //   } else {
-
-  //   //   }
-  //   // }
-  // };
+  const handleKeyDownGuesserBox = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      // SubmitGuess(onePointWord, threePointWord, guess);
+      // setGuess('');
+      if (inputRefGuesserBox.current) {
+        inputRefGuesserBox.current.value = "";
+      }
+    }
+  };
 
   const TypeDescription = async (description: string) => {
     // try {
@@ -239,7 +255,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     if (username == host) {
       console.log("I am the host")
       console.log(checkPlayersReadiness(teamInfo))
-      setIsReady(checkPlayersReadiness(teamInfo))
+      setIsLobbyReady(checkPlayersReadiness(teamInfo))
     }
   }
 
@@ -255,6 +271,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     setSelectedRounds(numOfRounds);
   }
 
+  const refreshGamePhase = async () => {
+    let gameMode = await getGamePhaseByRoom(lobby)
+    setGamePhase(gameMode);
+  }
+
+
 
   // Join Room ( Initialize SignalR connection )
   const joinRoom = async () => {
@@ -269,6 +291,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
         setMessages(messages => [...messages, { username, msg }])
         refreshTeams();
+        refreshGamePhase();
       });
 
       conn.on("SendMessage", (username: string, msg: string) => {
@@ -292,9 +315,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
         setMessages(messages => [...messages, { username, msg }])
       })
 
+      conn.on("RefreshGamePhase", (username: string, msg: string) => {
+        refreshGamePhase();
+        setMessages(messages => [...messages, { username, msg }])
+      })
+
       await conn.start();
       await conn.invoke("JoinSpecificGame", { Username: username, RoomName: lobby });
 
+      console.log(conn)
       setConnection(conn);
       console.log('success')
     } catch (e) {
@@ -318,15 +347,23 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           <OnlineTeamName teamName={"Team 1"} host={theHost} members={team1members} handleRemove={handleRemove} />
 
           <div className='lg:block hidden flex-col items-center space-y-5'>
-            <button onClick={handleToggleTeam} className='w-[230px] h-[50px] bg-dblue hover:bg-hblue active:text-dblue font-LuckiestGuy text-white text-center tracking-wider flex justify-center items-center rounded-md border border-black'>
+            <button onClick={handleToggleTeam} className={`w-[230px] h-[50px] bg-dblue ${isReady ? 'opacity-[0.5] cursor-default' : ' hover:bg-hblue active:text-dblue'}  font-LuckiestGuy text-white text-center tracking-wider flex justify-center items-center rounded-md border border-black`}>
               Toggle Team
             </button>
-            <div className='flex justify-center'>
-              <DiceBtn onClick={handleShuffle} />
+            <div className={`flex justify-center`}>
+              <DiceBtn isReady={isReady} onClick={handleShuffle} />
             </div>
-            <div className='flex justify-center' onClick={handleStartClick}>
-              <StartBtn isReady={isReady} isHost={isHost == 'true'} onClick={() => { }} />
-            </div>
+            {
+              isHost == 'true' ?
+                <div className='flex justify-center'>
+                  <StartBtn isLobbyReady={isLobbyReady} isHost={isHost == 'true'} onClick={handleStartClick} />
+                </div>
+                :
+                <div className='flex justify-center'>
+                  <ReadyBtn isReady={isReady} isHost={isHost == 'true'} onClick={handleReadyClick} />
+                </div>
+            }
+
           </div>
 
           <OnlineTeamName teamName={"Team 2"} host={theHost} members={team2members} handleRemove={handleRemove} />
@@ -382,9 +419,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
         </div>
 
-        <div className='lg:hidden flex justify-center' onClick={handleStartClick}>
+        {/* <div className='lg:hidden flex justify-center' onClick={handleStartClick}>
           <StartBtn isReady={isReady} isHost={isHost == 'true'} onClick={() => { }} />
-        </div>
+        </div> */}
 
         <div className='w-[88%] h-[224px] bg-lgray border-[#52576F] border-[20px] md:p-4 p-2 '>
           <div className='h-[70%] overflow-y-auto flex flex-col-reverse'>
@@ -453,7 +490,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             {
               role == 'Guesser' &&
               <div className={` h-[50px] mb-2 w-full px-2`}>
-                <input onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDown} value={guess} type="text" placeholder='Type Your Guesses Here...' className='rounded-md w-full text-[20px]' />
+                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} value={guess} type="text" placeholder='Type Your Guesses Here...' className='rounded-md w-full text-[20px] border px-4' />
               </div>
             }
 
@@ -504,7 +541,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
               <div className='text-[20px] h-full'>
                 {
                   role == 'Speaker' ?
-                    < textarea value={description} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} />
+                    < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} />
                     :
 
                     <div className={` overflow-auto border-0 w-[100%] h-[573px] px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div>
@@ -599,7 +636,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div> */}
 
           {/* push to whatever page is next */}
-          <div onClick={()=>{}} className='flex justify-center py-16 cursor-pointer'>
+          <div onClick={() => { }} className='flex justify-center py-16 cursor-pointer'>
             <PlayAgainBtn />
           </div>
         </div>

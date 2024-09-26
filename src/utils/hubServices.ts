@@ -64,9 +64,15 @@ export const RefreshTime = async (conn: HubConnection, username: string, lobbyro
 
 export const RefreshRounds = async (conn: HubConnection, username: string, lobbyroom: string, numOfRounds: number) => {
     try {
-        console.log("I am here")
-
         conn && await conn.invoke("RefreshRounds", { Username: username, RoomName: lobbyroom }, numOfRounds);
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export const RefreshGamePhase = async (conn: HubConnection, username: string, lobbyroom: string, gamePhase: string) => {
+    try {
+        conn && await conn.invoke("RefreshGamePhase", { Username: username, RoomName: lobbyroom }, gamePhase);
     } catch (e) {
         console.log(e)
     }
