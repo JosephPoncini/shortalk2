@@ -75,17 +75,27 @@ export const checkPlayersReadiness = (teamInfo: ITeamsInfo): boolean => {
         teamInfo.readyStatusB1, teamInfo.readyStatusB2, teamInfo.readyStatusB3, teamInfo.readyStatusB4, teamInfo.readyStatusB5
     ];
 
+    const team1 = [
+        teamInfo.playerA1, teamInfo.playerA2, teamInfo.playerA3, teamInfo.playerA4, teamInfo.playerA5,
+    ]
+
+    const team2 = [
+        teamInfo.playerB1, teamInfo.playerB2, teamInfo.playerB3, teamInfo.playerB4, teamInfo.playerB5
+    ]
+
     // Count the number of players that are ready
     const readyPlayersCount = readyStatuses.filter(status => status).length;
 
     // Count the total number of players in the lobby
     const totalPlayers = players.filter(player => player != undefined).length;
 
-    console.log(readyPlayersCount);
-    console.log(totalPlayers);
+    const totalPlayersOnTeam1 = team1.filter(player => player != undefined).length;
+
+    const totalPlayersOnTeam2 = team2.filter(player => player != undefined).length;
 
     // Check if there are at least 4 players ready and if all but one player is ready
-    const isReadyToStart = totalPlayers >= 4 && readyPlayersCount >= totalPlayers - 1;
+    const isReadyToStart = totalPlayers >= 4 && readyPlayersCount >= totalPlayers - 1 && Math.abs(totalPlayersOnTeam2 - totalPlayersOnTeam1)  < 2;
+
 
     return isReadyToStart;
 };

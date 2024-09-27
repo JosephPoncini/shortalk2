@@ -1,6 +1,6 @@
 'use client'
 import GoHomeBtn from "@/components/GoHomeBtn";
-import { createRoom, joinRoom } from "@/utils/dataServices";
+import { checkIfNameExistsInGame, checkIfRoomExists, createRoom, joinRoom } from "@/utils/dataServices";
 import { removeSpaces } from "@/utils/utilities";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -44,6 +44,21 @@ export default function Home() {
     else if (LobbyName === '') {
       setWarnText('Please enter a room name.')
       setSuccessColor(false)
+    }
+    else if (!await checkIfRoomExists(LobbyName)) 
+    {      
+      setWarnText('This room does not exist.')
+      setSuccessColor(false)
+    }
+    else if( sessionStorage.getItem("BannedRoom") == LobbyName)
+    {
+      setWarnText('You cannot go into this room')
+      setSuccessColor(false)
+    }
+    else if (await checkIfNameExistsInGame(LobbyName, userName)) 
+    {      
+      setWarnText('The name you chose is already taken in this room.')
+      setSuccessColor(false)
     } else {
       sessionStorage.setItem("Username", userName)
       sessionStorage.setItem("isHost", 'false')
@@ -63,7 +78,12 @@ export default function Home() {
     else if (LobbyName === '') {
       setWarnText('Please enter a room name.')
       setSuccessColor(false)
-    } else {
+    }
+    else if (await checkIfRoomExists(LobbyName)) {
+      setWarnText('Room name is already taken.')
+      setSuccessColor(false)
+    }
+    else {
       sessionStorage.setItem("Username", userName)
       sessionStorage.setItem("isHost", 'true')
       let msg = await createRoom({ userName: userName, roomName: LobbyName })

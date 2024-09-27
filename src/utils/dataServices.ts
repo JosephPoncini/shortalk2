@@ -27,6 +27,21 @@ export const joinRoom = async (requestBody: ILobbyRequest) => {
     return result;
 };
 
+export const checkIfRoomExists = async (roomName: string) => {
+    const promise = await fetch(url + `CheckIfRoomExists/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
+
+export const checkIfNameExistsInGame = async (roomName: string, username: string) => {
+    const promise = await fetch(url + `CheckIfNameExistsInGame/${roomName}/${username}`)
+    const result = await promise.json();
+
+    return result
+}
+
+
 export const getGamebyRoomName = async (roomName: string) => {
     const promise = await fetch(url + `getRoomByName/${roomName}`)
     const result = await promise.json();
@@ -152,3 +167,17 @@ export const changeGamePhase = async (requestBody: IChangeGamePhaseRequest) => {
     const result = await promise.text();
     return result;
 };
+
+export const getStartTime = async (roomName: string) => {
+    const promise = await fetch(url + `getStartTimeByRoom/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
+
+export const setStartTimeForRound = async (roomName: string) => {
+    const promise = await fetch(url + `setStartTimeForRound/${roomName}`)
+    const result = await promise.text();
+
+    return result
+}

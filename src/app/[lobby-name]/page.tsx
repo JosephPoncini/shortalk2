@@ -14,11 +14,12 @@ import SkipBtn from '@/components/SkipBtn'
 import StartBtn from '@/components/StartBtn'
 import StatusBar from '@/components/StatusBar'
 import ThreePointBtn from '@/components/ThreePointBtn'
-import { changeGamePhase, changeNumberOfRounds, changeTimeLimit, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, removePlayer, setReadyStatus, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
+import { changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
 import { RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage } from '@/utils/hubServices'
 import { ITeamsInfo, members } from '@/utils/interefaces'
 import { checkPlayersReadiness, extractTeam1members, extractTeam2members, renderOptions } from '@/utils/utilities'
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
+import { time } from 'console'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState, useRef } from 'react'
 
@@ -64,6 +65,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const inputRefGuesserBox = useRef<HTMLInputElement | null>(null);
 
+  const [timeLimit, setTimeLimit] = useState<number>(90)
   const [round, setRound] = useState<number>(0);
   const [roundTotal, setRoundTotal] = useState<number>(0);
   const [role, setRole] = useState<string>('Defense');
@@ -205,6 +207,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     }
   };
 
+  const handleTimeOut = async () => {
+    if (isHost == 'true') {
+      let msg = await changeGamePhase({ roomName: lobby, gamePhase: "scoreBoard" })
+      console.log(msg);
+      // conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+    }
+    setGamePhase("scoreBoard")
+  }
+
   const TypeDescription = async (description: string) => {
     // try {
     //   conn && await conn.invoke("TypeDescription", description);
@@ -250,13 +261,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     let teamInfo = await getTeamMembersByRoom(lobby);
     setTeam1members(extractTeam1members(teamInfo));
     setTeam2members(extractTeam2members(teamInfo));
-    let host = await getHostByRoom(lobby);
+    // let host = await getHostByRoom(lobby);
 
-    if (username == host) {
-      console.log("I am the host")
-      console.log(checkPlayersReadiness(teamInfo))
-      setIsLobbyReady(checkPlayersReadiness(teamInfo))
+    if (username && !await checkIfNameExistsInGame(lobby, username)) {
+      sessionStorage.setItem("BannedRoom", lobby);
+      // localStorage.setItem("BannedRoom",lobby);
+      router.push(`../`);
     }
+
+    setIsLobbyReady(checkPlayersReadiness(teamInfo))
   }
 
   const refreshTime = async () => {
@@ -272,7 +285,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
 
   const refreshGamePhase = async () => {
-    let gameMode = await getGamePhaseByRoom(lobby)
+    let gameMode = await getGamePhaseByRoom(lobby);
+    let time = await getTimeLimitByRoom(lobby);
+    setTimeLimit(time);
     setGamePhase(gameMode);
   }
 
@@ -369,12 +384,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           <OnlineTeamName teamName={"Team 2"} host={theHost} members={team2members} handleRemove={handleRemove} />
         </div>
 
-        <div className='lg:hidden flex justify-center gap-4'>
+        {/* <div className='lg:hidden flex justify-center gap-4'>
           <button className='w-[180px] h-[50px] bg-dblue lg:mt-5 mt-0 font-LuckiestGuy flex justify-center'>
             <p className=' text-white text-center tracking-wider flex items-center'>Toggle Team</p>
           </button>
           <ShuffleBtn onClick={() => { }} />
-        </div>
+        </div> */}
 
         <div className=' flex flex-col items-center space-y-4'>
           <div className='lg:flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
@@ -446,13 +461,14 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
       <div className='flex flex-col justify-between h-screen items-center'>
 
-        <div className='relative w-full'>
+        <div className='relative w-full h-[10%]'>
           <NavBar title={"Shortalk: " + params['lobby-name']} />
         </div>
 
-        <div className='p-5 pt-10 w-full'>
+        <div className='p-5 pt-10 w-full h-[15%]'>
           <StatusBar
-            time={0}
+            timeLimit={timeLimit}
+            lobby={lobby}
             teamName=''
             user={username}
             roundNumber={round}
@@ -460,15 +476,14 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             role={role}
             OnePointWord={onePointWordHasBeenSaid ? onePointWord : '???'}
             ThreePointWord={threePointWordHasBeenSaid ? threePointWord : '???'}
-            // OnePointWord={""}
-            // ThreePointWord={""}
             Speaker={speaker}
+            onTimeOut={handleTimeOut}
           />
         </div>
-        <div className='grid md:grid-cols-3 gap-5 px-5 pb-5 w-full '>
+        <div className='grid md:grid-cols-3 gap-5 px-5 pb-5 w-full h-[75%]'>
 
           {/* This is the Guesser box */}
-          <div className='bg-white rounded-lg flex flex-col justify-between'>
+          <div className='bg-white rounded-lg flex flex-col justify-between h-full'>
 
             {/* Text from the guessers goes here */}
             <div className='pt-4 pb-2 ps-4 text-[20px] h-full'>
@@ -497,13 +512,13 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the Card box */}
-          <div>
-            <div className='flex justify-center'>
+          <div className=' h-full'>
+            <div className='flex justify-center h-[85%]'>
               <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'Guesser'} />
             </div>
             {
               role == 'Speaker' ?
-                <div className={`flex justify-center py-5`}>
+                <div className={`flex justify-center`}>
                   {
                     threePointWordHasBeenSaid ?
                       <ThreePointBtn onClick={handleThreePoint} />
@@ -516,11 +531,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
                 </div>
                 : role == 'Defense' ?
-                  <div className={`flex justify-center py-5`}>
+                  <div className={`flex justify-center`}>
                     <BuzzBtn onClick={() => { }} />
                   </div>
                   :
-                  <div className=' my-5 h-[75px]'>
+                  <div>
 
                   </div>
             }
@@ -529,26 +544,55 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the speaker box */}
-          <div className='bg-white rounded-lg flex flex-col justify-normal'>
-            <div className='pt-4 pb-2 ps-4 text-[20px]'>
-              Speaker Box
-            </div>
-            <hr className='bg-black mx-3' />
-
-            {/* Text from the Speaker goes here */}
-            {
-
-              <div className='text-[20px] h-full'>
-                {
-                  role == 'Speaker' ?
-                    < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} />
-                    :
-
-                    <div className={` overflow-auto border-0 w-[100%] h-[573px] px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div>
-                }
-
+          <div className=' flex flex-col justify-between h-full'>
+            <div className='bg-white rounded-lg flex flex-col justify-normal h-[48%]'>
+              <div className='pt-4 pb-2 ps-4 text-[20px]'>
+                Speaker Box
               </div>
-            }
+              <hr className='bg-black mx-3' />
+
+              {/* Text from the Speaker goes here */}
+              {
+
+                <div className='text-[20px] h-full'>
+                  {
+                    role == 'Speaker' ?
+                      < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} />
+                      :
+
+                      <div className={` overflow-auto border-0 w-[100%] h-[90%] px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div>
+                  }
+
+                </div>
+              }
+            </div>
+            <div className=' bg-dblue rounded-lg flex items-center h-[48%] h-max-[300px] '>
+              <div className=' bg-white w-full flex flex-col h-[90%]'>
+                <div className=' flex justify-center text-[20px]'>Round #/# </div>
+                <div className=' flex justify-between'>
+                  <div className=' w-full text-center text-[18px]'>
+                    <div >Team 1</div>
+                    {
+                      team1members.map(player => {
+                        return(
+                          <div>{player.name}</div>
+                        )
+                      })
+                    }
+                  </div>
+                    <div className=' w-full text-center text-[18px]'>
+                      <div>Team 2</div>
+                      {
+                      team2members.map(player => {
+                        return(
+                          <div>{player.name}</div>
+                        )
+                      })
+                    }
+                    </div>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>

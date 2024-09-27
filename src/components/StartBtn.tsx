@@ -11,26 +11,26 @@ interface IStartButton {
 
 const StartBtn = (props: IStartButton) => {
 
-  const classNameBase = ' rounded-2xl w-[200px] h-[100px] flex justify-center items-center px-4 ';
+  const classNameBase = '';
 
 
  
-  const [className, setClassName] = useState<string>(classNameBase);
+  // const [className, setClassName] = useState<string>(classNameBase);
 
 
 
-  useEffect(() => {
+  // useEffect(() => {
 
-      if (props.isLobbyReady) {
-        setClassName(classNameBase + ' bg-dblue hover:bg-hblue active:text-dblue border-2 border-black cursor-pointer ')
-      } else {
-        setClassName(classNameBase + ' bg-lgray border-2 border-black ')
-      }
-  }, [props.isLobbyReady])
+  //     if (props.isLobbyReady) {
+  //       setClassName(classNameBase + '  cursor-pointer ')
+  //     } else {
+  //       setClassName(classNameBase + ' opacity border-2 border-black ')
+  //     }
+  // }, [props.isLobbyReady])
 
 
   return (
-    <div onClick={props.onClick} className={className + 'font-LuckiestGuy text-[30px]  text-white border cursor-pointer'}>
+    <div onClick={props.onClick} className={`font-LuckiestGuy text-[30px] text-white border rounded-2xl w-[200px] h-[100px] flex justify-center items-center px-4 bg-dblue border-2 border-black ${ props.isLobbyReady ? 'cursor-pointer hover:bg-hblue active:text-dblue':'cursor-default opacity-[.5]'}`}>
       <div className='bg-lblue bg-lgray bg-dblue'></div>
       Start
     </div>
