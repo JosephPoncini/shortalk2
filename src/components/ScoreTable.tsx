@@ -1,17 +1,14 @@
 'use client'
 
+import { ICardDto } from '@/utils/interefaces'
 import React from 'react'
 
-interface ICard {
-    top: string
-    bottom: string
-}
 
 interface IScoreTableProps {
-    skipWords: ICard[]
-    buzzWords: ICard[]
-    onePointWords: ICard[]
-    threePointWords: ICard[]
+    skipWords: ICardDto[]
+    buzzWords: ICardDto[]
+    onePointWords: ICardDto[]
+    threePointWords: ICardDto[]
 }
 
 const ScoreTable = (props: IScoreTableProps) => {
@@ -32,10 +29,10 @@ const ScoreTable = (props: IScoreTableProps) => {
                                     return (
                                         <div key={id} className='flex justify-between'>
                                             <p>
-                                                {card.top}
+                                                {card.firstWord}
                                             </p>
                                             <p>
-                                                {card.bottom}
+                                                {card.secondWord}
                                             </p>
                                         </div>
                                     )
@@ -62,10 +59,10 @@ const ScoreTable = (props: IScoreTableProps) => {
                                 return (
                                     <div key={id} className='flex justify-between'>
                                         <p>
-                                            {card.top}
+                                            {card.firstWord}
                                         </p>
                                         <p>
-                                            {card.bottom}
+                                            {card.secondWord}
                                         </p>
                                     </div>
                                 )
@@ -91,10 +88,10 @@ const ScoreTable = (props: IScoreTableProps) => {
                                 return (
                                     <div key={id} className='flex justify-between'>
                                         <p>
-                                            {card.top}
+                                            {card.firstWord}
                                         </p>
                                         <p>
-                                            {card.bottom}
+                                            {card.secondWord}
                                         </p>
                                     </div>
                                 )
@@ -120,10 +117,10 @@ const ScoreTable = (props: IScoreTableProps) => {
                                 return (
                                     <div key={id} className='flex justify-between'>
                                         <p>
-                                            {card.top}
+                                            {card.firstWord}
                                         </p>
                                         <p>
-                                            {card.bottom}
+                                            {card.secondWord}
                                         </p>
                                     </div>
                                 )

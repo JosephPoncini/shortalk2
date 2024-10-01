@@ -13,6 +13,8 @@ interface IOnlineTeam {
   members: {
     name: string
     readyStatus: boolean
+    role: string
+    spot: number
   }[];
   handleRemove: (playerName: string) => void;
 }

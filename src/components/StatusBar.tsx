@@ -10,7 +10,7 @@ interface IStatusBar {
   teamName: string | null
   roundNumber: number | null
   roundTotal: number | null
-  role: string | null
+  role: string | undefined
   OnePointWord: string | null
   ThreePointWord: string | null
   Speaker: string | null
@@ -45,13 +45,13 @@ const StatusBar = (props: IStatusBar) => {
     const intervalId = setInterval(() => {
       const now = getSecondsSinceEpoch(); // Get time in seconds since epoch
       let time = props.timeLimit - (now - startTime)
-      console.log("TimeLime " + props.timeLimit)
-      console.log("now " + now);
-      console.log("startTime " + startTime);
-      console.log("time " + time)
+      // console.log("TimeLime " + props.timeLimit)
+      // console.log("now " + now);
+      // console.log("startTime " + startTime);
+      // console.log("time " + time)
       if(time < 0){
         setCurrentTime(0);
-        // props.onTimeOut();  
+        props.onTimeOut();  
       }else
       {
         setCurrentTime(time);        

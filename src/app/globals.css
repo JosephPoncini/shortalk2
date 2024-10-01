@@ -17,6 +17,19 @@
   src: url('../fonts/Roboto-Regular.ttf');
 }
 
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 1);
+  }
+}
+
+.glow-effect {
+  animation: glow 5s infinite;
+}
+
 
 .bigCardBg{
   background-color: white;
@@ -121,6 +134,8 @@ width: 100%;
 polygon {
 fill: aliceblue;
 }
+
+
 
 /* WARNING!!!!!!!!!! */
 /* ONLY WICKED CSS BELOW THIS COMMENT */

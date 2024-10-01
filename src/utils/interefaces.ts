@@ -78,6 +78,14 @@ export interface IRemovePlayerRequest {
 export interface members {
     name: string
     readyStatus: boolean
+    role: string
+    spot: number
+}
+
+export interface ITeams {
+    teamA: members[]
+    teamB: members[]
+    myRole?: string
 }
 
 export interface IReadyStatusRequest {
@@ -99,4 +107,36 @@ export interface IChangeNumOfRoundsRequest {
 export interface IChangeGamePhaseRequest {
     roomName: string
     gamePhase: string
+}
+
+export interface ICardDto {
+    firstWord: string
+    secondWord: string
+}
+
+interface ICard {
+    top: string
+    bottom: string
+  }
+
+export interface ISubmitCardRequest {
+    roomName: string
+    card: ICardDto
+}
+
+export interface IAllWords {
+    skippedWords: string
+    onePointWords: string
+    threePointWords: string
+    buzzWords: string
+}
+export interface ICheckPlayersReadiness {
+    isReadyToStart: boolean
+    numOfPlayersReady: number
+    numOfPlayers: number
+}
+
+export interface IWordsHaveBeenSaidDto {
+    onePointWordHasBeenSaid: boolean
+    threePointWordHasBeenSaid: boolean
 }

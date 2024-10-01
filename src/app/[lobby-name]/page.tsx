@@ -14,19 +14,17 @@ import SkipBtn from '@/components/SkipBtn'
 import StartBtn from '@/components/StartBtn'
 import StatusBar from '@/components/StatusBar'
 import ThreePointBtn from '@/components/ThreePointBtn'
-import { changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
-import { RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage } from '@/utils/hubServices'
-import { ITeamsInfo, members } from '@/utils/interefaces'
-import { checkPlayersReadiness, extractTeam1members, extractTeam2members, renderOptions } from '@/utils/utilities'
+import { addBuzzedWord, addOnePointWord, addSkippedWord, addThreePointWord, changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, cleanSlate, getAllWords, getCard, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, getTurnNumber, getWordsBeenSaid, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
+import { GoToNextTurn, RefreshCard, RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage, submitGuess, TypeDescription } from '@/utils/hubServices'
+import { IAllWords, ICardDto, ITeams, ITeamsInfo, IWordsHaveBeenSaidDto, members } from '@/utils/interefaces'
+import { assignRoles, checkPlayersReadiness, extractTeam1members, extractTeam2members, parseString, renderOptions } from '@/utils/utilities'
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { time } from 'console'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState, useRef } from 'react'
+import { QuestionMark, Shield, UserSound } from '@phosphor-icons/react'
+import NextBtn from '@/components/NextBtn'
 
-interface ICard {
-  top: string
-  bottom: string
-}
 
 const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
@@ -42,6 +40,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const [gamePhase, setGamePhase] = useState<string>("lobby")
 
   //lobby UseStates
+
 
   const [conn, setConnection] = useState<HubConnection>()
   const [isReady, setIsReady] = useState<boolean>(false);
@@ -62,13 +61,15 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
 
   //game UseStates
-
+  const [guessBoxClicked, setGuessBoxClicked] = useState<boolean>(false); 
+  const [speakerBoxClicked, setSpeakerBoxClicked] = useState<boolean>(false); 
   const inputRefGuesserBox = useRef<HTMLInputElement | null>(null);
 
   const [timeLimit, setTimeLimit] = useState<number>(90)
   const [round, setRound] = useState<number>(0);
+  const [turnNumber, setTurnNumber] = useState<number>(0);
   const [roundTotal, setRoundTotal] = useState<number>(0);
-  const [role, setRole] = useState<string>('Defense');
+  const [role, setRole] = useState<string | undefined>('defense');
   const [onePointWord, setOnePointWord] = useState<string>('');
   const [threePointWord, setThreePointWord] = useState<string>('');
   const [speaker, setSpeaker] = useState<string>('');
@@ -76,14 +77,17 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const [onePointWordHasBeenSaid, setOnePointWordHasBeenSaid] = useState<boolean>();
   const [threePointWordHasBeenSaid, setThreePointWordHasBeenSaid] = useState<boolean>();
 
-  const [buzzWords, setBuzzWords] = useState<ICard[]>([])
-  const [onePointWords, setOnePointWords] = useState<ICard[]>([])
-  const [threePointWords, setThreePointWords] = useState<ICard[]>([])
-  const [skipWords, setSkipWords] = useState<ICard[]>([])
+  const [buzzWords, setBuzzWords] = useState<ICardDto[]>([])
+  const [onePointWords, setOnePointWords] = useState<ICardDto[]>([])
+  const [threePointWords, setThreePointWords] = useState<ICardDto[]>([])
+  const [skipWords, setSkipWords] = useState<ICardDto[]>([])
 
   const [guess, setGuess] = useState<string>('')
-  const [guesses, setGuesses] = useState<{ username: string; msg: string; color: string }[]>([]);
+  const [guesses, setGuesses] = useState<{ username: string; guess: string; color: string }[]>([]);
   const [description, setDescription] = useState<string>('');
+
+  const [numbOfPlayersReady, setNumOfPlayersReady] = useState<number>(0);
+  const [totalNumberOfPlayers, setTotalNumberOfPlayers] = useState<number>(0);
 
   //router push
 
@@ -120,6 +124,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
     changeBackEndStatus();
   }, [isReady])
+
+  useEffect(()=>{
+    setSpeakerBoxClicked(false);
+    setGuessBoxClicked(false);
+  },[gamePhase])
 
 
   // Handle Functions Lobby Room 
@@ -175,8 +184,38 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     if (isLobbyReady) {
       let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
       console.log(msg);
+
+      // conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await GoToNextTurn(conn, username, lobby)
       conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+
     }
+  }
+
+  const handleNextTurn = async () => {
+    // turnNumber increases by 1 ==> service
+    // players fetch new turnNumber
+    // players figure out new roles
+    // refresh Card
+    console.log(isReady)
+    if (isLobbyReady) {
+      let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+      console.log(msg);
+
+      let msg2 = await cleanSlate(lobby);
+      console.log(msg2)
+
+      // conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await GoToNextTurn(conn, username, lobby)
+      conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+
+    }else{
+      setIsReady(true);
+      setGamePhase("intermission")
+    }
+
   }
 
   const handleReadyClick = async () => {
@@ -199,9 +238,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const handleKeyDownGuesserBox = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      // SubmitGuess(onePointWord, threePointWord, guess);
-      // setGuess('');
       if (inputRefGuesserBox.current) {
+        submitGuess(conn, username, lobby, inputRefGuesserBox.current.value)
         inputRefGuesserBox.current.value = "";
       }
     }
@@ -213,41 +251,57 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       console.log(msg);
       // conn && username && await RefreshGamePhase(conn, username, lobby, "game")
     }
+    let words:IAllWords = await getAllWords(lobby);
+
+    setSkipWords(parseString(words.skippedWords));
+    setBuzzWords(parseString(words.buzzWords));
+    setOnePointWords(parseString(words.onePointWords));
+    setThreePointWords(parseString(words.threePointWords));
     setGamePhase("scoreBoard")
   }
 
-  const TypeDescription = async (description: string) => {
-    // try {
-    //   conn && await conn.invoke("TypeDescription", description);
-    // } catch (e) {
-    //   console.log(e)
-    // }
-  }
+  // const TypeDescription = async (description: string) => {
+  //   // try {
+  //   //   conn && await conn.invoke("TypeDescription", description);
+  //   // } catch (e) {
+  //   //   console.log(e)
+  //   // }
 
-  const handleOnChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // }
+
+  const handleOnChange = async (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     // if (description != event.target.value) {
     //   TypeDescription(event.target.value)
     // } else {
     //   TypeDescription(event.target.value)
     // }
+    conn && username && await TypeDescription(conn, username, lobby, event.target.value)
   }
 
   const handleSkip = async () => {
-    // await AppendSkipPointWords(lobbyRoomName, onePointWord, threePointWord)
-    // await getNewCard(userData.username, lobbyRoomName)
+    let msg = await addSkippedWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    console.log(msg);
+
+    conn && username && await RefreshCard(conn, username, lobby)
+
   }
   const handleBuzz = async () => {
-    // Buzz();
-    // await AppendBuzzWords(lobbyRoomName, onePointWord, threePointWord)
-    // await getNewCard(userData.username, lobbyRoomName)
+    let msg = await addBuzzedWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    console.log(msg);
+
+    conn && username && await RefreshCard(conn, username, lobby)
   }
   const handleOnePoint = async () => {
-    // await AppendOnePointWords(lobbyRoomName, onePointWord, threePointWord)
-    // await getNewCard(userData.username, lobbyRoomName)
+    let msg = await addOnePointWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    console.log(msg);
+
+    conn && username && await RefreshCard(conn, username, lobby)
   }
   const handleThreePoint = async () => {
-    // await AppendThreePointWords(lobbyRoomName, onePointWord, threePointWord)
-    // await getNewCard(userData.username, lobbyRoomName)
+    let msg = await addThreePointWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    console.log(msg);
+
+    conn && username && await RefreshCard(conn, username, lobby)
   }
 
   const handlePlayAgain = () => {
@@ -259,9 +313,22 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   // SignalR functions (what we want the pages to do on signalR commands)
   const refreshTeams = async () => {
     let teamInfo = await getTeamMembersByRoom(lobby);
-    setTeam1members(extractTeam1members(teamInfo));
-    setTeam2members(extractTeam2members(teamInfo));
-    // let host = await getHostByRoom(lobby);
+    let turn = await getTurnNumber(lobby)
+    // console.log(teamInfo)
+
+    const team1 = extractTeam1members(teamInfo);
+    const team2 = extractTeam2members(teamInfo)
+
+    if(turn > 0){
+
+    const teams:ITeams = assignRoles({teamA: team1, teamB: team2}, turn, username);
+    setTeam1members(teams.teamA);
+    setTeam2members(teams.teamB);
+    setRole(teams.myRole)
+    }else{
+    setTeam1members(team1);
+    setTeam2members(team2);
+    }
 
     if (username && !await checkIfNameExistsInGame(lobby, username)) {
       sessionStorage.setItem("BannedRoom", lobby);
@@ -269,7 +336,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       router.push(`../`);
     }
 
-    setIsLobbyReady(checkPlayersReadiness(teamInfo))
+    let playerReadiness = checkPlayersReadiness(teamInfo)
+
+    setIsLobbyReady(playerReadiness.isReadyToStart)
+    setNumOfPlayersReady(playerReadiness.numOfPlayersReady)
+    setTotalNumberOfPlayers(playerReadiness.numOfPlayers);
   }
 
   const refreshTime = async () => {
@@ -289,10 +360,24 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     let time = await getTimeLimitByRoom(lobby);
     setTimeLimit(time);
     setGamePhase(gameMode);
+    setIsReady(false);
   }
 
+  const refreshCard = async () => {
+    let card: ICardDto = await getCard(lobby);
+    console.log(card.firstWord);
+    console.log(card.secondWord);
+    setOnePointWord(card.firstWord);
+    setThreePointWord(card.secondWord);
+    setOnePointWordHasBeenSaid(false);
+    setThreePointWordHasBeenSaid(false);
+  }
 
-
+ const refreshWordsSaidTracker = async () => {
+  let wordsSaid:IWordsHaveBeenSaidDto = await getWordsBeenSaid(lobby);
+  setOnePointWordHasBeenSaid(wordsSaid.onePointWordHasBeenSaid);
+  setThreePointWordHasBeenSaid(wordsSaid.threePointWordHasBeenSaid);
+ }
   // Join Room ( Initialize SignalR connection )
   const joinRoom = async () => {
     console.log("We are joing room")
@@ -333,6 +418,29 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       conn.on("RefreshGamePhase", (username: string, msg: string) => {
         refreshGamePhase();
         setMessages(messages => [...messages, { username, msg }])
+      })
+
+      conn.on("RefreshCard", (username: string, msg: string) => {
+        refreshCard();
+        console.log(msg)
+        // setMessages(messages => [...messages, { username, msg }])
+      })
+
+      conn.on("GoToNextTurn", (username: string, msg: string) => {
+        refreshTeams();
+        console.log(msg)
+        // setMessages(messages => [...messages, { username, msg }])
+      })
+
+      conn.on("TypeDescription", (username: string, msg: string) => {
+        setDescription(msg);
+      })
+
+      
+      conn.on("SendGuess", (username: string, guess: string, color: string) => {
+        //retrieve if OnePointWordHasBeenSaid and if ThreePointWordHasBeenSaid
+        refreshWordsSaidTracker();
+        setGuesses(guesses => [...guesses, { username, guess, color}])
       })
 
       await conn.start();
@@ -495,7 +603,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
               {
                 guesses.map((guess, ix) => {
                   return (
-                    <p key={ix} className={'overflow-auto font-Roboto' + guess.color}> <span className=' font-RobotoBold'>{guess.username}</span> {" - "} <span className={'text-' + guess.color}>{guess.msg}</span> </p>
+                    <p key={ix} className={'overflow-auto font-Roboto' + guess.color}> <span className=' font-RobotoBold'>{guess.username}</span> {" - "} <span className={'text-' + guess.color}>{guess.guess}</span> </p>
                   )
                 })
 
@@ -503,9 +611,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             </div>
 
             {
-              role == 'Guesser' &&
+              role == 'guesser' &&
               <div className={` h-[50px] mb-2 w-full px-2`}>
-                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} value={guess} type="text" placeholder='Type Your Guesses Here...' className='rounded-md w-full text-[20px] border px-4' />
+                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[20px] border px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={()=>setGuessBoxClicked(true)} />
               </div>
             }
 
@@ -514,10 +622,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           {/* This is the Card box */}
           <div className=' h-full'>
             <div className='flex justify-center h-[85%]'>
-              <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'Guesser'} />
+              <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} />
             </div>
             {
-              role == 'Speaker' ?
+              role == 'speaker' ?
                 <div className={`flex justify-center`}>
                   {
                     threePointWordHasBeenSaid ?
@@ -530,9 +638,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                   }
 
                 </div>
-                : role == 'Defense' ?
+                : role == 'defense' ?
                   <div className={`flex justify-center`}>
-                    <BuzzBtn onClick={() => { }} />
+                    <BuzzBtn onClick={handleBuzz} />
                   </div>
                   :
                   <div>
@@ -545,7 +653,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
           {/* This is the speaker box */}
           <div className=' flex flex-col justify-between h-full'>
-            <div className='bg-white rounded-lg flex flex-col justify-normal h-[48%]'>
+            <div className={`bg-white rounded-lg flex flex-col justify-normal h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'}`}>
               <div className='pt-4 pb-2 ps-4 text-[20px]'>
                 Speaker Box
               </div>
@@ -554,10 +662,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
               {/* Text from the Speaker goes here */}
               {
 
-                <div className='text-[20px] h-full'>
+                <div className={`text-[20px] h-full`}>
                   {
-                    role == 'Speaker' ?
-                      < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} />
+                    role == 'speaker' ?
+                      < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} onClick={()=>setSpeakerBoxClicked(true)} />
                       :
 
                       <div className={` overflow-auto border-0 w-[100%] h-[90%] px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div>
@@ -571,25 +679,46 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                 <div className=' flex justify-center text-[20px]'>Round #/# </div>
                 <div className=' flex justify-between'>
                   <div className=' w-full text-center text-[18px]'>
-                    <div >Team 1</div>
+                    <div className=' underline border-b-2 border-gray-50'>Team 1</div>
                     {
                       team1members.map(player => {
-                        return(
-                          <div>{player.name}</div>
+                        return (
+                          <div  key={player.name} className='border-b-2 border-r-2 border-l-2 border-gray-50 grid grid-cols-3 items-center'>
+                            <div className='  col-start-2 items-center'><div>{player.name}</div></div>
+                            {
+                              player.role == "speaker" ?
+                              <div className=" w-8"><UserSound size={32} /></div>
+                              : player.role == "guesser" ?
+                              <div className=" w-8"><QuestionMark size={32} /></div>
+                              : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone"/></div> 
+                            }
+
+                          </div>
+
                         )
                       })
                     }
                   </div>
-                    <div className=' w-full text-center text-[18px]'>
-                      <div>Team 2</div>
-                      {
+                  <div className=' w-full text-center text-[18px]'>
+                    <div className=' underline border-b-2 border-gray-50'>Team 2</div>
+                    {
                       team2members.map(player => {
-                        return(
-                          <div>{player.name}</div>
+                        return (
+                          <div  key={player.name} className='border-b-2 border-r-2 border-gray-50 grid grid-cols-3 items-center'>
+                            <div className='  col-start-2 items-center'><div>{player.name}</div></div>
+                            {
+                              player.role == "speaker" ?
+                              <div className=" w-8"><UserSound size={32} /></div>
+                              : player.role == "guesser" ?
+                              <div className=" w-8"><QuestionMark size={32} /></div>
+                              : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone"/></div> 
+                            }
+
+                          </div>
                         )
                       })
                     }
-                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -601,10 +730,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
   else if (gamePhase == "scoreBoard") {
     return (
-      <div>
-        <div className='text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest pt-20'>
+      <div className=' flex flex-col items-center justify-center space-y-5 h-screen'>
+        <div className='text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>
           <p>Times Up!!!</p>
-          <p className='pt-5'>Turn results</p>
+          <p className=''>Turn results</p>
         </div>
         <ScoreTable
           skipWords={skipWords}
@@ -612,6 +741,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           onePointWords={onePointWords}
           threePointWords={threePointWords}
         />
+        <NextBtn onClick={handleNextTurn}/>
         {/* {
           ((turnNumber-1)%(2*Math.max(Team1NameList.length, Team2NameList.length)) == 0)
               ? <div className='flex justify-center pb-16'>
@@ -628,7 +758,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   else if (gamePhase == "intermission") {
     return (
       <div className='flex flex-col justify-center h-screen items-center'>
-        <div className=' text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>Waiting on other players... (5/6)</div>
+        <div className=' text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>Waiting on other players...</div>
+        <div className=' text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>{"(" + numbOfPlayersReady + "/" + totalNumberOfPlayers + ")"}</div>
       </div>
     )
   }

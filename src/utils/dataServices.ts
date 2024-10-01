@@ -1,5 +1,5 @@
 import { request } from "http";
-import { GameModel, IChangeGamePhaseRequest, IChangeNumOfRoundsRequest, IChangeTimeLimitRequest, ILobbyRequest, IReadyStatusRequest, IRemovePlayerRequest } from "./interefaces";
+import { GameModel, IChangeGamePhaseRequest, IChangeNumOfRoundsRequest, IChangeTimeLimitRequest, ILobbyRequest, IReadyStatusRequest, IRemovePlayerRequest, ISubmitCardRequest } from "./interefaces";
 
 const url = 'http://localhost:5051/Game/';
 
@@ -178,6 +178,97 @@ export const getStartTime = async (roomName: string) => {
 export const setStartTimeForRound = async (roomName: string) => {
     const promise = await fetch(url + `setStartTimeForRound/${roomName}`)
     const result = await promise.text();
+
+    return result
+}
+
+export const getCard = async (roomName: string) => {
+    const promise = await fetch(url + `getCard/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
+
+export const getTurnNumber = async (roomName: string) => {
+    const promise = await fetch(url + `getTurnNumber/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
+
+
+export const addSkippedWord = async (requestBody: ISubmitCardRequest) => {
+    const promise = await fetch(url + 'addSkippedWord', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+    const result = await promise.text();
+    return result;
+};
+
+export const addBuzzedWord = async (requestBody: ISubmitCardRequest) => {
+    const promise = await fetch(url + 'addBuzzedWord', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+    const result = await promise.text();
+    return result;
+};
+
+export const addOnePointWord = async (requestBody: ISubmitCardRequest) => {
+    const promise = await fetch(url + 'addOnePointWord', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+    const result = await promise.text();
+    return result;
+};
+
+export const addThreePointWord = async (requestBody: ISubmitCardRequest) => {
+    const promise = await fetch(url + 'addThreePointWord', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+    const result = await promise.text();
+    return result;
+};
+
+export const getAllWords = async (roomName: string) => {
+    const promise = await fetch(url + `getAllWords/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
+
+export const cleanSlate = async (roomName: string) => {
+    const promise = await fetch(url + `cleanSlate/${roomName}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomName }),
+    });
+    const result = await promise.text();
+
+    return result
+}
+
+
+export const getWordsBeenSaid = async (roomName: string) => {
+    const promise = await fetch(url + `getWordsBeenSaid/${roomName}`)
+    const result = await promise.json();
 
     return result
 }

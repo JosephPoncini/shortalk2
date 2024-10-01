@@ -11,7 +11,7 @@ const Card = (props: { top: string, bottom: string, isGuessing: boolean }) => {
   return (
     <div className=' h-[90%] md:w-[350px] w-[275px] flex flex-col justify-center rounded-xl border-2 border-black bg-dblue text-center'>
       {props.isGuessing ?
-        <div className='w-full h-[90%]'>
+        <div className='w-full'>
           <Image src={cardBack} alt='the back of the card'/>
         </div>
         : 

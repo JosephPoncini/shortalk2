@@ -78,6 +78,30 @@ export const RefreshGamePhase = async (conn: HubConnection, username: string, lo
     }
 }
 
+export const RefreshCard = async (conn: HubConnection, username: string, lobbyroom: string) => {
+    try {
+        conn && await conn.invoke("RefreshCard", { Username: username, RoomName: lobbyroom });
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export const GoToNextTurn = async (conn: HubConnection, username: string, lobbyroom: string) => {
+    try {
+        conn && await conn.invoke("GoToNextTurn", { Username: username, RoomName: lobbyroom });
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export const TypeDescription = async (conn: HubConnection, username: string, lobbyroom: string, msg: string) => {
+    try {
+        conn && await conn.invoke("TypeDescription", { Username: username, RoomName: lobbyroom }, msg);
+    } catch (e) {
+        console.log(e)
+    }
+}
+
 
 const shuffleTeams = async (conn: HubConnection, username: string, lobbyroom: string) => {
     try {
@@ -90,6 +114,16 @@ const shuffleTeams = async (conn: HubConnection, username: string, lobbyroom: st
 const removePlayer = async (conn: HubConnection, playerName: string, lobbyroom: string) => {
     try {
         conn && await conn.invoke("RemovePlayer", playerName, lobbyroom);
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+
+export const submitGuess = async (conn: HubConnection | undefined, username:string | null, lobby:string, guess: string) => {
+    console.log(conn)
+    try {
+        conn && await conn.invoke("SendGuess", { Username: username, RoomName: lobby } , guess);
     } catch (e) {
         console.log(e)
     }
