@@ -1,3 +1,4 @@
+import { LetterCircleH } from "@phosphor-icons/react/dist/ssr";
 import { ICardDto, ICheckPlayersReadiness, ITeams, ITeamsInfo, members } from "./interefaces";
 
 
@@ -113,6 +114,7 @@ export const assignRoles = (teams: ITeams, turnNumber: number, username: string 
     const teamAcount = teams.teamA.length;
     const teamBcount = teams.teamB.length;
 
+
     // // console.log("teams:")
     // // console.log(teams);
     // // console.log("Team A count " + teamAcount );
@@ -148,6 +150,15 @@ export const assignRoles = (teams: ITeams, turnNumber: number, username: string 
         }
     })
 
+    let round = 0;
+    if(teamAcount > teamBcount)
+    {
+        round = Math.ceil((turnNumber) / (2*teamAcount))
+    }else{
+        round = Math.ceil((turnNumber) / (2*teamBcount))       
+    }
+
+    teams.round = round;
     // console.log(teams.teamB)
 
     return teams;

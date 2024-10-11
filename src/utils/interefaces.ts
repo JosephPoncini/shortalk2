@@ -86,6 +86,7 @@ export interface ITeams {
     teamA: members[]
     teamB: members[]
     myRole?: string
+    round?: number
 }
 
 export interface IReadyStatusRequest {
@@ -139,4 +140,9 @@ export interface ICheckPlayersReadiness {
 export interface IWordsHaveBeenSaidDto {
     onePointWordHasBeenSaid: boolean
     threePointWordHasBeenSaid: boolean
+}
+
+export interface IScoresDto {
+    teamAScore: number
+    teamBScore: number
 }

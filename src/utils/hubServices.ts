@@ -78,9 +78,9 @@ export const RefreshGamePhase = async (conn: HubConnection, username: string, lo
     }
 }
 
-export const RefreshCard = async (conn: HubConnection, username: string, lobbyroom: string) => {
+export const RefreshCard = async (conn: HubConnection, username: string, lobbyroom: string, msg: string) => {
     try {
-        conn && await conn.invoke("RefreshCard", { Username: username, RoomName: lobbyroom });
+        conn && await conn.invoke("RefreshCard", { Username: username, RoomName: lobbyroom }, msg);
     } catch (e) {
         console.log(e)
     }

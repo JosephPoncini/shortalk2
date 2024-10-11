@@ -61,9 +61,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
 
   //game UseStates
-  const [guessBoxClicked, setGuessBoxClicked] = useState<boolean>(false); 
-  const [speakerBoxClicked, setSpeakerBoxClicked] = useState<boolean>(false); 
+  const [guessBoxClicked, setGuessBoxClicked] = useState<boolean>(false);
+  const [speakerBoxClicked, setSpeakerBoxClicked] = useState<boolean>(false);
   const inputRefGuesserBox = useRef<HTMLInputElement | null>(null);
+  const inputRefSpeakerBox = useRef<HTMLTextAreaElement | null>(null);
 
   const [timeLimit, setTimeLimit] = useState<number>(90)
   const [round, setRound] = useState<number>(0);
@@ -88,6 +89,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const [numbOfPlayersReady, setNumOfPlayersReady] = useState<number>(0);
   const [totalNumberOfPlayers, setTotalNumberOfPlayers] = useState<number>(0);
+
+  const [gettingScores, setGettingScores] = useState<boolean>(false);
 
   //router push
 
@@ -125,10 +128,16 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     changeBackEndStatus();
   }, [isReady])
 
-  useEffect(()=>{
+  useEffect(() => {
     setSpeakerBoxClicked(false);
     setGuessBoxClicked(false);
-  },[gamePhase])
+  }, [gamePhase])
+
+  // useEffect(()=>{
+  //   if(round > Number(selectedRounds)){
+  //     setGamePhase("endOfGame");
+  //   }
+  // },[round])
 
 
   // Handle Functions Lobby Room 
@@ -186,7 +195,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       console.log(msg);
 
       // conn && username && await RefreshCard(conn, username, lobby)
-      conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await RefreshCard(conn, username, lobby, "")
       conn && username && await GoToNextTurn(conn, username, lobby)
       conn && username && await RefreshGamePhase(conn, username, lobby, "game")
 
@@ -207,11 +216,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       console.log(msg2)
 
       // conn && username && await RefreshCard(conn, username, lobby)
-      conn && username && await RefreshCard(conn, username, lobby)
+      conn && username && await RefreshCard(conn, username, lobby, "")
       conn && username && await GoToNextTurn(conn, username, lobby)
       conn && username && await RefreshGamePhase(conn, username, lobby, "game")
 
-    }else{
+    } else {
       setIsReady(true);
       setGamePhase("intermission")
     }
@@ -251,7 +260,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       console.log(msg);
       // conn && username && await RefreshGamePhase(conn, username, lobby, "game")
     }
-    let words:IAllWords = await getAllWords(lobby);
+    setGuesses([]);
+    let words: IAllWords = await getAllWords(lobby);
 
     setSkipWords(parseString(words.skippedWords));
     setBuzzWords(parseString(words.buzzWords));
@@ -279,29 +289,29 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
 
   const handleSkip = async () => {
-    let msg = await addSkippedWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    let msg = await addSkippedWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
     console.log(msg);
 
-    conn && username && await RefreshCard(conn, username, lobby)
+    conn && username && await RefreshCard(conn, username, lobby, "skipped")
 
   }
   const handleBuzz = async () => {
-    let msg = await addBuzzedWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    let msg = await addBuzzedWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
     console.log(msg);
 
-    conn && username && await RefreshCard(conn, username, lobby)
+    conn && username && await RefreshCard(conn, username, lobby, "buzzed")
   }
   const handleOnePoint = async () => {
-    let msg = await addOnePointWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    let msg = await addOnePointWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
     console.log(msg);
 
-    conn && username && await RefreshCard(conn, username, lobby)
+    conn && username && await RefreshCard(conn, username, lobby, "claimed 1 point")
   }
   const handleThreePoint = async () => {
-    let msg = await addThreePointWord({ roomName: lobby, card: {firstWord: onePointWord, secondWord: threePointWord} })
+    let msg = await addThreePointWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
     console.log(msg);
 
-    conn && username && await RefreshCard(conn, username, lobby)
+    conn && username && await RefreshCard(conn, username, lobby, "claimed 3 points")
   }
 
   const handlePlayAgain = () => {
@@ -319,15 +329,16 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     const team1 = extractTeam1members(teamInfo);
     const team2 = extractTeam2members(teamInfo)
 
-    if(turn > 0){
+    if (turn > 0) {
 
-    const teams:ITeams = assignRoles({teamA: team1, teamB: team2}, turn, username);
-    setTeam1members(teams.teamA);
-    setTeam2members(teams.teamB);
-    setRole(teams.myRole)
-    }else{
-    setTeam1members(team1);
-    setTeam2members(team2);
+      const teams: ITeams = assignRoles({ teamA: team1, teamB: team2 }, turn, username);
+      setTeam1members(teams.teamA);
+      setTeam2members(teams.teamB);
+      setRole(teams.myRole)
+      teams.round && setRound(teams.round);
+    } else {
+      setTeam1members(team1);
+      setTeam2members(team2);
     }
 
     if (username && !await checkIfNameExistsInGame(lobby, username)) {
@@ -373,11 +384,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     setThreePointWordHasBeenSaid(false);
   }
 
- const refreshWordsSaidTracker = async () => {
-  let wordsSaid:IWordsHaveBeenSaidDto = await getWordsBeenSaid(lobby);
-  setOnePointWordHasBeenSaid(wordsSaid.onePointWordHasBeenSaid);
-  setThreePointWordHasBeenSaid(wordsSaid.threePointWordHasBeenSaid);
- }
+  const refreshWordsSaidTracker = async () => {
+    let wordsSaid: IWordsHaveBeenSaidDto = await getWordsBeenSaid(lobby);
+    setOnePointWordHasBeenSaid(wordsSaid.onePointWordHasBeenSaid);
+    setThreePointWordHasBeenSaid(wordsSaid.threePointWordHasBeenSaid);
+  }
   // Join Room ( Initialize SignalR connection )
   const joinRoom = async () => {
     console.log("We are joing room")
@@ -421,8 +432,21 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       })
 
       conn.on("RefreshCard", (username: string, msg: string) => {
+        let color = ""
+        if (msg == "buzzed") {
+          color = "dred"
+        } else if (msg == "skipped") {
+          color = "mgray"
+        }
         refreshCard();
-        console.log(msg)
+        if (inputRefSpeakerBox.current) {
+          inputRefSpeakerBox.current.value = "";
+        }
+        setDescription("");
+        if (msg) {
+          setGuesses(guesses => [...guesses, { username, guess: msg, color }])
+        }
+        setGettingScores(true);
         // setMessages(messages => [...messages, { username, msg }])
       })
 
@@ -436,11 +460,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
         setDescription(msg);
       })
 
-      
+
       conn.on("SendGuess", (username: string, guess: string, color: string) => {
         //retrieve if OnePointWordHasBeenSaid and if ThreePointWordHasBeenSaid
         refreshWordsSaidTracker();
-        setGuesses(guesses => [...guesses, { username, guess, color}])
+        setGuesses(guesses => [...guesses, { username, guess, color }])
       })
 
       await conn.start();
@@ -567,60 +591,63 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   else if (gamePhase == "game") {
     return (
 
-      <div className='flex flex-col justify-between h-screen items-center'>
+      <div className='flex flex-col h-[100vh] items-center'>
 
-        <div className='relative w-full h-[10%]'>
+        <div className='relative w-full'>
           <NavBar title={"Shortalk: " + params['lobby-name']} />
         </div>
 
-        <div className='p-5 pt-10 w-full h-[15%]'>
+        <div className='p-5 pt-10 w-full'>
           <StatusBar
             timeLimit={timeLimit}
             lobby={lobby}
-            teamName=''
             user={username}
-            roundNumber={round}
-            roundTotal={roundTotal}
             role={role}
-            OnePointWord={onePointWordHasBeenSaid ? onePointWord : '???'}
-            ThreePointWord={threePointWordHasBeenSaid ? threePointWord : '???'}
-            Speaker={speaker}
             onTimeOut={handleTimeOut}
+            gettingScores={gettingScores}
+            setGettingScores={setGettingScores}
           />
         </div>
-        <div className='grid md:grid-cols-3 gap-5 px-5 pb-5 w-full h-[75%]'>
+        <div className='flex justify-evenly space-x-5 px-5 pb-5 w-full h-[70vh]'>
 
           {/* This is the Guesser box */}
-          <div className='bg-white rounded-lg flex flex-col justify-between h-full'>
+          <div className='bg-white rounded-lg flex flex-col justify-between h-full w-full '>
 
             {/* Text from the guessers goes here */}
-            <div className='pt-4 pb-2 ps-4 text-[20px] h-full'>
-              <p>Guesser Box</p>
-              <hr className='bg-black me-3' />
+            <div className='pt-4 pb-2 px-4 text-[20px] w-full max-h-[60vh]'>
+              <p className='border-black border-b'>Guesser Box</p>
+              {/* <hr className='bg-black me-3' /> */}
               <div className=' text-green font-bold'></div>
               <div className=' text-yellow font-bold'></div>
               <div className=' text-purple font-bold'></div>
-              {
-                guesses.map((guess, ix) => {
-                  return (
-                    <p key={ix} className={'overflow-auto font-Roboto' + guess.color}> <span className=' font-RobotoBold'>{guess.username}</span> {" - "} <span className={'text-' + guess.color}>{guess.guess}</span> </p>
-                  )
-                })
+              <div className=' text-mgray font-bold'></div>
+              <div className=' overflow-y-auto flex flex-col-reverse h-full pb-4 '>
+                {/* <div> */}
+                {
+                  guesses.slice().reverse().map((guess, ix) => {
+                    console.log(guess.color);
+                    return (
+                      <p key={ix} className={`font-Roboto ${guess.color == 'dred' || guess.color == 'mgray' || guess.color == '' ? 'border-b-2' : 'border-none'}`}> <span className=' font-RobotoBold'>{guess.username}</span> {" - "} <span className={`${'text-' + guess.color}`}>{guess.guess}</span> </p>
+                    )
+                  })
 
-              }
+                }
+                {/* </div> */}
+              </div>
+
+
             </div>
-
             {
               role == 'guesser' &&
-              <div className={` h-[50px] mb-2 w-full px-2`}>
-                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[20px] border px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={()=>setGuessBoxClicked(true)} />
+              <div className={` h-[6%] mb-2 w-full px-2 mt-4`}>
+                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[20px] border px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={() => setGuessBoxClicked(true)} />
               </div>
             }
 
           </div>
 
           {/* This is the Card box */}
-          <div className=' h-full'>
+          <div className=' h-full w-full space-y-5 '>
             <div className='flex justify-center h-[85%]'>
               <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} />
             </div>
@@ -652,7 +679,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the speaker box */}
-          <div className=' flex flex-col justify-between h-full'>
+          <div className=' flex flex-col justify-between h-full w-full '>
             <div className={`bg-white rounded-lg flex flex-col justify-normal h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'}`}>
               <div className='pt-4 pb-2 ps-4 text-[20px]'>
                 Speaker Box
@@ -665,10 +692,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                 <div className={`text-[20px] h-full`}>
                   {
                     role == 'speaker' ?
-                      < textarea onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} onClick={()=>setSpeakerBoxClicked(true)} />
+                      < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
                       :
+                      < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} value={description} />
+                        // {/* <div className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div> */}
 
-                      <div className={` overflow-auto border-0 w-[100%] h-[90%] px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div>
+
                   }
 
                 </div>
@@ -676,21 +705,21 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             </div>
             <div className=' bg-dblue rounded-lg flex items-center h-[48%] h-max-[300px] '>
               <div className=' bg-white w-full flex flex-col h-[90%]'>
-                <div className=' flex justify-center text-[20px]'>Round #/# </div>
+                <div className=' flex justify-center text-[20px]'>Round {round}/{selectedRounds} </div>
                 <div className=' flex justify-between'>
                   <div className=' w-full text-center text-[18px]'>
                     <div className=' underline border-b-2 border-gray-50'>Team 1</div>
                     {
                       team1members.map(player => {
                         return (
-                          <div  key={player.name} className='border-b-2 border-r-2 border-l-2 border-gray-50 grid grid-cols-3 items-center'>
+                          <div key={player.name} className='border-b-2 border-r-2 border-l-2 border-gray-50 grid grid-cols-3 items-center'>
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                              <div className=" w-8"><UserSound size={32} /></div>
-                              : player.role == "guesser" ?
-                              <div className=" w-8"><QuestionMark size={32} /></div>
-                              : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone"/></div> 
+                                <div className=" w-8"><UserSound size={32} /></div>
+                                : player.role == "guesser" ?
+                                  <div className=" w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -704,14 +733,14 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                     {
                       team2members.map(player => {
                         return (
-                          <div  key={player.name} className='border-b-2 border-r-2 border-gray-50 grid grid-cols-3 items-center'>
+                          <div key={player.name} className='border-b-2 border-r-2 border-gray-50 grid grid-cols-3 items-center'>
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                              <div className=" w-8"><UserSound size={32} /></div>
-                              : player.role == "guesser" ?
-                              <div className=" w-8"><QuestionMark size={32} /></div>
-                              : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone"/></div> 
+                                <div className=" w-8"><UserSound size={32} /></div>
+                                : player.role == "guesser" ?
+                                  <div className=" w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -741,7 +770,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           onePointWords={onePointWords}
           threePointWords={threePointWords}
         />
-        <NextBtn onClick={handleNextTurn}/>
+        <NextBtn onClick={handleNextTurn} />
         {/* {
           ((turnNumber-1)%(2*Math.max(Team1NameList.length, Team2NameList.length)) == 0)
               ? <div className='flex justify-center pb-16'>

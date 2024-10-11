@@ -22,6 +22,7 @@ const config: Config = {
         'lgreen' : '#C1F299',
         'dgreen' : '#006110',
         'lgray' : '#DDDDDD',
+        'mgray' : '#999999',
         'dgray' : '#5C5757',
         'textGray' : '#545454',
         'lmagenta' : '#F099F2',

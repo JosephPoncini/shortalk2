@@ -272,3 +272,11 @@ export const getWordsBeenSaid = async (roomName: string) => {
 
     return result
 }
+
+
+export const getScores = async (roomName: string) => {
+    const promise = await fetch(url + `getScores/${roomName}`)
+    const result = await promise.json();
+
+    return result
+}
