@@ -7,8 +7,11 @@
 - Clean up Status bar ( Time, Player, and role is all that is needed)
 - Players box could have some bg colors added
 - Handle Scoring
-- Handle End Game Set up
-- put in animations for new cards
+- Handle End Game Set up 
+- put in animations for new cards X
 - fix page refresh issue
+- word combos need to be less than 20 characters
+- bug when someone new joins, resets all ready statuses?
 
--fix end of game issue- backend should change game phase to end of game
+- fix end of game issue- backend should change game phase to end of game
+- On create/join room, have an waiting to... screen X

@@ -119,6 +119,7 @@ const ScoreTable = (props: IScoreTableProps) => {
                                         <p>
                                             {card.firstWord}
                                         </p>
+                                        <p>{" "}</p>
                                         <p>
                                             {card.secondWord}
                                         </p>

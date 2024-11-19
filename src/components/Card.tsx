@@ -7,9 +7,9 @@ interface ICard {
   bottom: string
 }
 
-const Card = (props: { top: string, bottom: string, isGuessing: boolean }) => {
+const Card = (props: { top: string, bottom: string, isGuessing: boolean, isAnimated: boolean }) => {
   return (
-    <div className=' md:w-[350px] w-[275px] flex flex-col justify-center rounded-xl border-2 border-black bg-dblue text-center py-12'>
+    <div className={` ${props.isAnimated && 'barrelRoll'} md:w-[350px] w-[275px] flex flex-col justify-center rounded-xl border-2 border-black bg-dblue text-center py-12`}>
       {props.isGuessing ?
         <div className='w-full'>
           <Image src={cardBack} alt='the back of the card'/>

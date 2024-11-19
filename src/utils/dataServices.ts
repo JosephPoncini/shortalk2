@@ -265,6 +265,32 @@ export const cleanSlate = async (roomName: string) => {
     return result
 }
 
+export const cleanLobby = async (roomName: string) => {
+    const promise = await fetch(url + `cleanLobby/${roomName}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomName }),
+    });
+    const result = await promise.text();
+
+    return result
+}
+
+export const cleanScore = async (roomName: string) => {
+    const promise = await fetch(url + `cleanScore/${roomName}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomName }),
+    });
+    const result = await promise.text();
+
+    return result
+}
+
 
 export const getWordsBeenSaid = async (roomName: string) => {
     const promise = await fetch(url + `getWordsBeenSaid/${roomName}`)

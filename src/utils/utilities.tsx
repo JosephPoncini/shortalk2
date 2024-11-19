@@ -183,3 +183,11 @@ export const parseString = (input:string) => {
     }
     return [];
 }
+
+export function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+export const checkWin = (teamInfo: ITeamsInfo) => {
+    
+}

@@ -14,10 +14,10 @@ import SkipBtn from '@/components/SkipBtn'
 import StartBtn from '@/components/StartBtn'
 import StatusBar from '@/components/StatusBar'
 import ThreePointBtn from '@/components/ThreePointBtn'
-import { addBuzzedWord, addOnePointWord, addSkippedWord, addThreePointWord, changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, cleanSlate, getAllWords, getCard, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getTeamMembersByRoom, getTimeLimitByRoom, getTurnNumber, getWordsBeenSaid, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
+import { addBuzzedWord, addOnePointWord, addSkippedWord, addThreePointWord, changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, cleanLobby, cleanScore, cleanSlate, getAllWords, getCard, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getScores, getTeamMembersByRoom, getTimeLimitByRoom, getTurnNumber, getWordsBeenSaid, joinRoom, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
 import { GoToNextTurn, RefreshCard, RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage, submitGuess, TypeDescription } from '@/utils/hubServices'
-import { IAllWords, ICardDto, ITeams, ITeamsInfo, IWordsHaveBeenSaidDto, members } from '@/utils/interefaces'
-import { assignRoles, checkPlayersReadiness, extractTeam1members, extractTeam2members, parseString, renderOptions } from '@/utils/utilities'
+import { IAllWords, ICardDto, IScoresDto, ITeams, ITeamsInfo, IWordsHaveBeenSaidDto, members } from '@/utils/interefaces'
+import { assignRoles, checkPlayersReadiness, delay, extractTeam1members, extractTeam2members, parseString, renderOptions } from '@/utils/utilities'
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { time } from 'console'
 import { useRouter } from 'next/navigation'
@@ -37,7 +37,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const maxMinutes: number = 5;
   const maxSeconds: number = 59;
 
-  const [gamePhase, setGamePhase] = useState<string>("lobby")
+  const [gamePhase, setGamePhase] = useState<string>("")
 
   //lobby UseStates
 
@@ -92,6 +92,14 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const [gettingScores, setGettingScores] = useState<boolean>(false);
 
+  const [teamAScore, setTeamAScore] = useState<number>(0);
+  const [teamBScore, setTeamBScore] = useState<number>(0);
+
+  const [isWinning, setIsWinning] = useState<number>(0);
+
+  //animations
+  const [doBarrelRoll, setDoBarrelRoll] = useState<boolean>(false);
+
   //router push
 
   const redirectToHomeWithRoom = () => {
@@ -102,7 +110,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   useEffect(() => {
     const getGameInfo = async () => {
-      joinRoom();
+      let mode = await getGamePhaseByRoom(lobby);
+      setGamePhase(mode);
+      join();
       refreshTime();
       let myHost = await getHostByRoom(lobby);
       setTheHost(myHost);
@@ -116,10 +126,24 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     }
   }, [])
 
+  useEffect(() => {
 
+    const renderScores = async () => {
+      const scores: IScoresDto = await getScores(lobby)
+      setTeamAScore(scores.teamAScore);
+      setTeamBScore(scores.teamBScore);
+    }
+
+    if (gamePhase == "endOfGame") {
+      renderScores();
+    }
+
+
+  }, [gamePhase])
 
   useEffect(() => {
     const changeBackEndStatus = async () => {
+      console.log(isReady);
       let msg = username && await setReadyStatus({ userName: username, roomName: lobby, isReady: isReady });
       console.log(msg);
       conn && username && RefreshTeams(conn, username, lobby, isReady ? "*is ready*" : "*is not ready*");
@@ -192,7 +216,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
     if (isLobbyReady) {
       let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+      let msg2 = await cleanSlate(lobby);
+      let msg3 = await cleanScore(lobby);
+
       console.log(msg);
+      console.log(msg2);
+      console.log(msg3);
 
       // conn && username && await RefreshCard(conn, username, lobby)
       conn && username && await RefreshCard(conn, username, lobby, "")
@@ -207,8 +236,13 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     // players fetch new turnNumber
     // players figure out new roles
     // refresh Card
+    const turn = await getTurnNumber(lobby)
     console.log(isReady)
-    if (isLobbyReady) {
+
+    if (gamePhase == "finalScoreBoard") {
+      // let msg = username && await removePlayer({ playerName: username, roomName: lobby });
+      setGamePhase("endOfGame")
+    } else if (isLobbyReady) {
       let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
       console.log(msg);
 
@@ -256,10 +290,19 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const handleTimeOut = async () => {
     if (isHost == 'true') {
-      let msg = await changeGamePhase({ roomName: lobby, gamePhase: "scoreBoard" })
-      console.log(msg);
+      if (gamePhase == 'lastTurn') {
+        let msg = await changeGamePhase({ roomName: lobby, gamePhase: "lobby" })
+        let msg2 = await cleanLobby(lobby)
+        console.log(msg);
+        console.log(msg2);
+      } else {
+        let msg = await changeGamePhase({ roomName: lobby, gamePhase: "scoreBoard" })
+        console.log(msg);
+      }
+
       // conn && username && await RefreshGamePhase(conn, username, lobby, "game")
     }
+    // setIsReady(false);
     setGuesses([]);
     let words: IAllWords = await getAllWords(lobby);
 
@@ -267,7 +310,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     setBuzzWords(parseString(words.buzzWords));
     setOnePointWords(parseString(words.onePointWords));
     setThreePointWords(parseString(words.threePointWords));
-    setGamePhase("scoreBoard")
+    if (gamePhase == 'lastTurn') {
+      setGamePhase("finalScoreBoard")
+    } else {
+      setGamePhase("scoreBoard")
+    }
+
   }
 
   // const TypeDescription = async (description: string) => {
@@ -314,9 +362,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     conn && username && await RefreshCard(conn, username, lobby, "claimed 3 points")
   }
 
-  const handlePlayAgain = () => {
-
-    // router.push('/pages/lobbyRoom')
+  const handlePlayAgain = async () => {
+    let msg = username && await joinRoom({ userName: username, roomName: lobby });
+    conn && username && await conn.invoke("JoinSpecificGame", { Username: username, RoomName: lobby });
+    setGamePhase("lobby");
   }
 
 
@@ -340,10 +389,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       setTeam1members(team1);
       setTeam2members(team2);
     }
-
-    if (username && !await checkIfNameExistsInGame(lobby, username)) {
+    let trigger = username && !await checkIfNameExistsInGame(lobby, username)
+    if (trigger && gamePhase == "lobby") {
       sessionStorage.setItem("BannedRoom", lobby);
-      // localStorage.setItem("BannedRoom",lobby);
+      sessionStorage.setItem("Username","");
+      sessionStorage.setItem("isHost","false");
       router.push(`../`);
     }
 
@@ -371,18 +421,34 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     let time = await getTimeLimitByRoom(lobby);
     setTimeLimit(time);
     setGamePhase(gameMode);
-    setIsReady(false);
+    if (gameMode != "lobby") {
+      setIsReady(false);
+    }
+
   }
 
   const refreshCard = async () => {
-    let card: ICardDto = await getCard(lobby);
-    console.log(card.firstWord);
-    console.log(card.secondWord);
-    setOnePointWord(card.firstWord);
-    setThreePointWord(card.secondWord);
-    setOnePointWordHasBeenSaid(false);
-    setThreePointWordHasBeenSaid(false);
+    if (!doBarrelRoll) {
+      setDoBarrelRoll(true)
+      let card: ICardDto = await getCard(lobby);
+      console.log(card.firstWord);
+      console.log(card.secondWord);
+      setOnePointWord(card.firstWord);
+      setThreePointWord(card.secondWord);
+      setOnePointWordHasBeenSaid(false);
+      setThreePointWordHasBeenSaid(false);
+    }
   }
+
+  useEffect(() => {
+    const resetBarrelRoll = async () => {
+      await delay(500);
+      setDoBarrelRoll(false);
+    }
+    if (doBarrelRoll) {
+      resetBarrelRoll();
+    }
+  }, [doBarrelRoll])
 
   const refreshWordsSaidTracker = async () => {
     let wordsSaid: IWordsHaveBeenSaidDto = await getWordsBeenSaid(lobby);
@@ -390,8 +456,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     setThreePointWordHasBeenSaid(wordsSaid.threePointWordHasBeenSaid);
   }
   // Join Room ( Initialize SignalR connection )
-  const joinRoom = async () => {
-    console.log("We are joing room")
+  const join = async () => {
+    console.log("We are joining room")
     try {
       const conn = new HubConnectionBuilder()
         .withUrl(url)
@@ -402,7 +468,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
         setMessages(messages => [...messages, { username, msg }])
         refreshTeams();
-        refreshGamePhase();
+
+        // if (gamePhase != "finalScoreBoard" && gamePhase != "endOfGame") {
+        //   refreshGamePhase();
+        // }
       });
 
       conn.on("SendMessage", (username: string, msg: string) => {
@@ -433,11 +502,21 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
       conn.on("RefreshCard", (username: string, msg: string) => {
         let color = ""
+        let location = "/sounds/";
         if (msg == "buzzed") {
           color = "dred"
+          location += "buzzSound.wav"
         } else if (msg == "skipped") {
+          location += "skipSound.wav"
           color = "mgray"
+        } else if (msg == "claimed 1 point") {
+          location += "onePointSound.wav"
+        } else if (msg == "claimed 3 points") {
+          location += "threePointSound.wav"
         }
+        console.log(location);
+        const audio = new Audio(location);
+        audio.play();
         refreshCard();
         if (inputRefSpeakerBox.current) {
           inputRefSpeakerBox.current.value = "";
@@ -588,7 +667,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       </div>
     )
   }
-  else if (gamePhase == "game") {
+  else if (gamePhase == "game" || gamePhase == "lastTurn") {
     return (
 
       <div className='flex flex-col h-[100vh] items-center'>
@@ -649,7 +728,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           {/* This is the Card box */}
           <div className=' h-full w-full space-y-5 '>
             <div className='flex justify-center h-[85%]'>
-              <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} />
+              <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} isAnimated={doBarrelRoll} />
             </div>
             {
               role == 'speaker' ?
@@ -695,7 +774,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                       < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
                       :
                       < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} value={description} />
-                        // {/* <div className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div> */}
+                    // {/* <div className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div> */}
 
 
                   }
@@ -757,7 +836,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       </div>
     )
   }
-  else if (gamePhase == "scoreBoard") {
+  else if (gamePhase == "scoreBoard" || gamePhase == "finalScoreBoard") {
     return (
       <div className=' flex flex-col items-center justify-center space-y-5 h-screen'>
         <div className='text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>
@@ -814,7 +893,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                   Team 1:
                 </div>
                 <div className='md:text-end text-center'>
-                  {/* {Team1Score} */}
+                  {teamAScore}
                 </div>
               </div>
             </div>
@@ -827,7 +906,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                   Team 2:
                 </div>
                 <div className='md:text-end text-center'>
-                  {/* {Team2Score} */}
+                  {teamBScore}
                 </div>
               </div>
             </div>
@@ -840,7 +919,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div> */}
 
           {/* push to whatever page is next */}
-          <div onClick={() => { }} className='flex justify-center py-16 cursor-pointer'>
+          <div onClick={handlePlayAgain} className='flex justify-center py-16 cursor-pointer'>
             <PlayAgainBtn />
           </div>
         </div>
