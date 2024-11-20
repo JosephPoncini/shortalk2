@@ -15,9 +15,9 @@ import StartBtn from '@/components/StartBtn'
 import StatusBar from '@/components/StatusBar'
 import ThreePointBtn from '@/components/ThreePointBtn'
 import { addBuzzedWord, addOnePointWord, addSkippedWord, addThreePointWord, changeGamePhase, changeNumberOfRounds, changeTimeLimit, checkIfNameExistsInGame, cleanLobby, cleanScore, cleanSlate, getAllWords, getCard, getGamebyRoomName, getGamePhaseByRoom, getHostByRoom, getNumOfRoundsByRoom, getScores, getTeamMembersByRoom, getTimeLimitByRoom, getTurnNumber, getWordsBeenSaid, joinRoom, removePlayer, setReadyStatus, setStartTimeForRound, shuffleTeams, toggleTeamFetch } from '@/utils/dataServices'
-import { GoToNextTurn, RefreshCard, RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage, submitGuess, TypeDescription } from '@/utils/hubServices'
+import { BanPlayer, GoToNextTurn, RefreshCard, RefreshGamePhase, RefreshRounds, RefreshTeams, RefreshTime, sendMessage, submitGuess, TypeDescription } from '@/utils/hubServices'
 import { IAllWords, ICardDto, IScoresDto, ITeams, ITeamsInfo, IWordsHaveBeenSaidDto, members } from '@/utils/interefaces'
-import { assignRoles, checkPlayersReadiness, delay, extractTeam1members, extractTeam2members, parseString, renderOptions } from '@/utils/utilities'
+import { assignRoles, checkPlayersReadiness, checkWin, delay, extractTeam1members, extractTeam2members, parseString, renderOptions } from '@/utils/utilities'
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { time } from 'console'
 import { useRouter } from 'next/navigation'
@@ -75,7 +75,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const [threePointWord, setThreePointWord] = useState<string>('');
   const [speaker, setSpeaker] = useState<string>('');
 
-  const [onePointWordHasBeenSaid, setOnePointWordHasBeenSaid] = useState<boolean>();
+  const [onePointWordHasBeenSaid, setOnePointWordHasBeenSaid] = useState<boolean>(true);
   const [threePointWordHasBeenSaid, setThreePointWordHasBeenSaid] = useState<boolean>();
 
   const [buzzWords, setBuzzWords] = useState<ICardDto[]>([])
@@ -168,6 +168,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   const handleRemove = async (playerName: string) => {
     let msg = await removePlayer({ playerName: playerName, roomName: lobby });
     console.log(msg)
+    conn && username && BanPlayer(conn, "admin", lobby, playerName);
     conn && username && RefreshTeams(conn, "admin", lobby, `removed ${playerName}`);
   }
 
@@ -311,6 +312,13 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     setOnePointWords(parseString(words.onePointWords));
     setThreePointWords(parseString(words.threePointWords));
     if (gamePhase == 'lastTurn') {
+      const scores: IScoresDto = await getScores(lobby)
+      console.log(scores)
+      console.log(username)
+      console.log(team1members)
+      let winMode = username && checkWin(username,team1members,scores)
+      console.log(winMode)
+      winMode && setIsWinning(winMode)
       setGamePhase("finalScoreBoard")
     } else {
       setGamePhase("scoreBoard")
@@ -389,13 +397,6 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
       setTeam1members(team1);
       setTeam2members(team2);
     }
-    let trigger = username && !await checkIfNameExistsInGame(lobby, username)
-    if (trigger && gamePhase == "lobby") {
-      sessionStorage.setItem("BannedRoom", lobby);
-      sessionStorage.setItem("Username","");
-      sessionStorage.setItem("isHost","false");
-      router.push(`../`);
-    }
 
     let playerReadiness = checkPlayersReadiness(teamInfo)
 
@@ -409,6 +410,18 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
     console.log(timeLimit)
     setSelectedMinutes(Math.floor(timeLimit / 60));
     setSelectedSeconds(timeLimit % 60);
+  }
+
+  const banPlayer = async (player: string) => {
+    console.log("This is the username: " + username)
+    console.log("This is the player being banned: " + player)
+    if (username == player) {
+      sessionStorage.setItem("BannedRoom", lobby);
+      sessionStorage.setItem("Username", "");
+      sessionStorage.setItem("isHost", "false");
+      router.push(`../`);
+    }
+
   }
 
   const refreshRounds = async () => {
@@ -490,6 +503,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
         setMessages(messages => [...messages, { username, msg }])
       })
 
+      conn.on("BanPlayer", (username: string, player: string) => {
+        console.log("We are banning a player")
+        banPlayer(player);
+        // setMessages(messages => [...messages, { username, msg }])
+      })
+
       conn.on("RefreshRounds", (username: string, msg: string) => {
         refreshRounds();
         setMessages(messages => [...messages, { username, msg }])
@@ -559,7 +578,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
   if (gamePhase == "lobby") {
     return (
-      <div className=' flex flex-col justify-between h-screen items-center'>
+      <div className=' flex flex-col justify-between pb-2 h-screen items-center'>
 
         <div className='relative w-full'>
           <NavBar title={"Room ID: " + params['lobby-name']} />
@@ -568,14 +587,16 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
         {/* Body */}
 
 
-        <div className='md:flex flex-row justify-between'>
+        <div className='flex flex-col sm:flex-row justify-between mb-2'>
 
           <OnlineTeamName teamName={"Team 1"} host={theHost} members={team1members} handleRemove={handleRemove} />
 
-          <div className='lg:block hidden flex-col items-center space-y-5'>
-            <button onClick={handleToggleTeam} className={`w-[230px] h-[50px] bg-dblue ${isReady ? 'opacity-[0.5] cursor-default' : ' hover:bg-hblue active:text-dblue'}  font-LuckiestGuy text-white text-center tracking-wider flex justify-center items-center rounded-md border border-black`}>
-              Toggle Team
-            </button>
+          <div className='flex-col items-center sm:space-y-5 order-3 sm:order-1'>
+            <div className={`flex justify-center`}>
+              <button onClick={handleToggleTeam} className={`w-[100px] sm:w-[230px] h-[25px] sm:h-[50px] bg-dblue ${isReady ? 'opacity-[0.5] cursor-default' : ' hover:bg-hblue active:text-dblue'}  font-LuckiestGuy text-white text-[12px] sm:text-lg text-center tracking-wider rounded-md border border-black`}>
+                Toggle Team
+              </button>
+            </div>
             <div className={`flex justify-center`}>
               <DiceBtn isReady={isReady} onClick={handleShuffle} />
             </div>
@@ -591,8 +612,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             }
 
           </div>
-
           <OnlineTeamName teamName={"Team 2"} host={theHost} members={team2members} handleRemove={handleRemove} />
+
+
         </div>
 
         {/* <div className='lg:hidden flex justify-center gap-4'>
@@ -602,39 +624,41 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           <ShuffleBtn onClick={() => { }} />
         </div> */}
 
-        <div className=' flex flex-col items-center space-y-4'>
-          <div className='lg:flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
-            <div className=' font-LuckiestGuy text-dblue text-3xl lg:text-start text-center'>Number of Rounds:</div>
-            <div className='flex lg:justify-end justify-center'>
+        <div className=' flex flex-col items-center space-y-2'>
+          <div className='flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
+            <div className=' font-LuckiestGuy text-dblue text-[20px] sm:text-3xl sm:text-start text-center'>Number of Rounds:</div>
+            <div className='flex justify-end'>
+              <div className=' text-lblue font-LuckiestGuy text-lg sm:text-3xl'>:</div>
               {
                 (isHost == 'true') ?
-                  <select value={selectedRounds} onChange={(e) => handleChangeRounds(e)} className=' h-10  rounded-md' name='Rounds' id='Rounds'>
+                  <select value={selectedRounds} onChange={(e) => handleChangeRounds(e)} className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' name='Rounds' id='Rounds'>
                     {renderOptions(1, maxRounds, false)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-3xl'>{selectedRounds} </div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedRounds} </div>
+
               }
             </div>
           </div>
-          <div className='lg:flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[300px]'>
-            <div className=' font-LuckiestGuy text-dblue text-3xl lg:text-start text-center'>Time Limit:</div>
-            <div className='lg:w-[30%] w-[100%] flex lg:justify-end justify-center space-x-3' >
+          <div className='flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
+            <div className=' font-LuckiestGuy text-dblue text-[20px] sm:text-3xl lg:text-start text-center'>Time Limit:</div>
+            <div className='lg:w-[30%] w-[100%] flex justify-end space-x-3' >
               {
                 (isHost == 'true') ?
-                  <select className='h-10 rounded-md' value={selectedMinutes} onChange={(e) => handleChangeTimeLimitMinutes(e)}>
+                  <select className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' value={selectedMinutes} onChange={(e) => handleChangeTimeLimitMinutes(e)}>
                     {renderOptions(0, maxMinutes, false)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-3xl'>{selectedMinutes}</div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedMinutes}</div>
               }
-              <div className=' text-dblue font-LuckiestGuy text-3xl'>:</div>
+              <div className=' text-dblue font-LuckiestGuy text-lg sm:text-3xl'>:</div>
               {
                 (isHost == 'true') ?
-                  <select className='h-10 rounded-md' value={selectedSeconds} onChange={(e) => handleChangeTimeLimitSeconds(e)}>
+                  <select className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' value={selectedSeconds} onChange={(e) => handleChangeTimeLimitSeconds(e)}>
                     {renderOptions(0, maxSeconds, true)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-3xl'>{selectedSeconds}</div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedSeconds}</div>
               }
             </div>
           </div>
@@ -649,7 +673,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           <StartBtn isReady={isReady} isHost={isHost == 'true'} onClick={() => { }} />
         </div> */}
 
-        <div className='w-[88%] h-[224px] bg-lgray border-[#52576F] border-[20px] md:p-4 p-2 '>
+        <div className=' w-[95%] sm:w-[88%] h-[100px] sm:h-[224px] bg-lgray border-[#52576F] border-[10px] sm:border-[20px] md:p-4 p-2 '>
           <div className='h-[70%] overflow-y-auto flex flex-col-reverse'>
             <div>
               {
@@ -676,7 +700,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           <NavBar title={"Shortalk: " + params['lobby-name']} />
         </div>
 
-        <div className='p-5 pt-10 w-full'>
+        <div className=' p-2 pt-3 sm:p-5 sm:pt-10 w-full'>
           <StatusBar
             timeLimit={timeLimit}
             lobby={lobby}
@@ -687,20 +711,20 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             setGettingScores={setGettingScores}
           />
         </div>
-        <div className='flex justify-evenly space-x-5 px-5 pb-5 w-full h-[70vh]'>
+        <div className='grid grid-cols-2 grid-rows-2 gap-2 sm:flex sm:justify-evenly sm:space-x-5 px-5 pb-5 w-full h-[600px] sm:h-[70vh]'>
 
           {/* This is the Guesser box */}
-          <div className='bg-white rounded-lg flex flex-col justify-between h-full w-full '>
+          <div className='bg-white rounded-lg flex flex-col justify-between h-[250px] sm:h-full w-full row-start-2'>
 
             {/* Text from the guessers goes here */}
-            <div className='pt-4 pb-2 px-4 text-[20px] w-full max-h-[60vh]'>
+            <div className=' pt-2 sm:pt-4 pb-2 sm:px-4 px-2 text-[12px] sm:text-[20px] w-full sm:max-h-[60vh]'>
               <p className='border-black border-b'>Guesser Box</p>
               {/* <hr className='bg-black me-3' /> */}
-              <div className=' text-green font-bold'></div>
-              <div className=' text-yellow font-bold'></div>
-              <div className=' text-purple font-bold'></div>
-              <div className=' text-mgray font-bold'></div>
-              <div className=' overflow-y-auto flex flex-col-reverse h-full pb-4 '>
+              <div className=' text-green font-bold hidden'></div>
+              <div className=' text-yellow font-bold hidden'></div>
+              <div className=' text-purple font-bold hidden'></div>
+              <div className=' text-mgray font-bold hidden'></div>
+              <div className=' overflow-y-auto flex flex-col-reverse h-full pb-4 mt-[-6px] sm:mt-0'>
                 {/* <div> */}
                 {
                   guesses.slice().reverse().map((guess, ix) => {
@@ -718,16 +742,16 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
             </div>
             {
               role == 'guesser' &&
-              <div className={` h-[6%] mb-2 w-full px-2 mt-4`}>
-                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[20px] border px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={() => setGuessBoxClicked(true)} />
+              <div className={` h-[6%] mb-2 w-full sm:px-2 mt-4`}>
+                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[10px] sm:text-[20px] border sm:px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={() => setGuessBoxClicked(true)} />
               </div>
             }
 
           </div>
 
           {/* This is the Card box */}
-          <div className=' h-full w-full space-y-5 '>
-            <div className='flex justify-center h-[85%]'>
+          <div className=' sm:h-full sm:w-full space-y-4 row-start-2'>
+            <div className='flex justify-center sm:h-[85%]'>
               <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} isAnimated={doBarrelRoll} />
             </div>
             {
@@ -758,9 +782,9 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the speaker box */}
-          <div className=' flex flex-col justify-between h-full w-full '>
-            <div className={`bg-white rounded-lg flex flex-col justify-normal h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'}`}>
-              <div className='pt-4 pb-2 ps-4 text-[20px]'>
+          <div className=' flex flex-col-reverse sm:flex-col justify-between h-full w-full row-start-1 col-span-2'>
+            <div className={`bg-white rounded-lg flex flex-col justify-normal h-[180px] sm:h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'} ${(role == 'speaker') && 'h-[180px]'}`}>
+              <div className='pt-4 pb-2 ps-4 text-[12px] sm:text-[20px]'>
                 Speaker Box
               </div>
               <hr className='bg-black mx-3' />
@@ -768,12 +792,12 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
               {/* Text from the Speaker goes here */}
               {
 
-                <div className={`text-[20px] h-full`}>
+                <div className={`text-[12px] sm:text-[20px] h-full`}>
                   {
                     role == 'speaker' ?
-                      < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
+                      < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[12px] sm:text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
                       :
-                      < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg`} value={description} />
+                      < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[12px] sm:text-[20px] rounded-b-lg`} value={description} />
                     // {/* <div className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div> */}
 
 
@@ -782,11 +806,11 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                 </div>
               }
             </div>
-            <div className=' bg-dblue rounded-lg flex items-center h-[48%] h-max-[300px] '>
+            <div className=' bg-dblue rounded-lg flex items-center h-[100px] sm:h-[48%] sm:h-max-[300px] overflow-y-scroll'>
               <div className=' bg-white w-full flex flex-col h-[90%]'>
-                <div className=' flex justify-center text-[20px]'>Round {round}/{selectedRounds} </div>
+                <div className=' flex justify-center text-[12px] sm:text-[20px]'>Round {round}/{selectedRounds} </div>
                 <div className=' flex justify-between'>
-                  <div className=' w-full text-center text-[18px]'>
+                  <div className=' w-full text-center text-[12px] sm:text-[18px]'>
                     <div className=' underline border-b-2 border-gray-50'>Team 1</div>
                     {
                       team1members.map(player => {
@@ -795,10 +819,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                                <div className=" w-8"><UserSound size={32} /></div>
+                                <div className=" w-4 sm:w-8"><UserSound size={32} /></div>
                                 : player.role == "guesser" ?
-                                  <div className=" w-8"><QuestionMark size={32} /></div>
-                                  : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                                  <div className=" w-4 sm:w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-4 sm:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -807,7 +831,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                       })
                     }
                   </div>
-                  <div className=' w-full text-center text-[18px]'>
+                  <div className=' w-full text-center text-[12px] sm:text-[18px]'>
                     <div className=' underline border-b-2 border-gray-50'>Team 2</div>
                     {
                       team2members.map(player => {
@@ -816,10 +840,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                                <div className=" w-8"><UserSound size={32} /></div>
+                                <div className=" w-4 sm:w-8"><UserSound size={32} /></div>
                                 : player.role == "guesser" ?
-                                  <div className=" w-8"><QuestionMark size={32} /></div>
-                                  : <div className=" w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                                  <div className=" w-4 sm:w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-4 sm:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -838,8 +862,8 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
   else if (gamePhase == "scoreBoard" || gamePhase == "finalScoreBoard") {
     return (
-      <div className=' flex flex-col items-center justify-center space-y-5 h-screen'>
-        <div className='text-center text-dblue text-[50px] font-LuckiestGuy tracking-widest'>
+      <div className=' flex flex-col items-center justify-center space-y-3 sm:space-y-5 px-4'>
+        <div className='text-center text-dblue text-[25px] sm:text-[50px] font-LuckiestGuy tracking-widest'>
           <p>Times Up!!!</p>
           <p className=''>Turn results</p>
         </div>
@@ -850,16 +874,6 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           threePointWords={threePointWords}
         />
         <NextBtn onClick={handleNextTurn} />
-        {/* {
-          ((turnNumber-1)%(2*Math.max(Team1NameList.length, Team2NameList.length)) == 0)
-              ? <div className='flex justify-center pb-16'>
-                  <ResultsBtn click={clickHandleResultsBtn} />
-              </div>
-              : <div className='flex justify-center pb-16'>
-                  <NextTurnBtn click={clickHandleNextTurn}/>
-              </div>
-      } */}
-
       </div>
     )
   }
@@ -873,40 +887,28 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
   }
   else if (gamePhase == "endOfGame") {
     return (
-      <div className='font-LuckiestGuy tracking-widest'>
-        <div className='text-center pt-32 pb-16 text-[50px] text-dblue flex flex-col'>
-          {/* {
-            Team1Score > Team2Score
-              ? <p>{Team1Name} WINS</p>
-              : Team2Score > Team1Score
-                ? <p>{Team2Name} WINS</p>
-                : <p>{"IT'S A TIE!"}</p>
-          } */}
+      <div className='font-LuckiestGuy tracking-widest px-4 h-screen flex flex-col justify-center items-center space-y-5'>
+        <div className='text-center pt-4 text-[25px] sm:text-[50px] text-dblue flex flex-col'>
+          {isWinning == 0 ? <div> It's A Tie</div>: isWinning == 1 ? <div> You Win !!!</div> : <div> You Lose !!!</div> }
           <p>Final Score</p>
         </div>
-        <div className='grid grid-cols-1'>
+        <div className=' w-full'>
 
           <div className='flex justify-center'>
-            <div className='flex justify-center bg-white border-[1px] border-black text-[48px] sm:w-[60%] w-full'>
-              <div className='grid md:grid-cols-2 grid-cols-1 py-10 w-[100%] sm:px-16 px-5'>
-                <div className='md:text-start text-center'>
-                  Team 1:
-                </div>
-                <div className='md:text-end text-center'>
-                  {teamAScore}
+            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] sm:text-[48px] sm:w-[60%] w-full'>
+              <div className='py-4 sm:py-10 w-[100%] px-4 sm:px-16 '>
+                <div className='text-center whitespace-nowrap'>
+                  Team 1: &nbsp;&nbsp; {teamAScore}
                 </div>
               </div>
             </div>
           </div>
 
           <div className='flex justify-center'>
-            <div className='flex justify-center bg-white border-[1px] border-black text-[48px] sm:w-[60%] w-full'>
-              <div className='grid md:grid-cols-2 grid-cols-1 py-10 w-[100%] sm:px-16 px-5'>
-                <div className='md:text-start text-center'>
-                  Team 2:
-                </div>
-                <div className='md:text-end text-center'>
-                  {teamBScore}
+            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] sm:text-[48px] sm:w-[60%] w-full'>
+              <div className='py-4 sm:py-10 w-[100%] px-4 sm:px-16 '>
+                <div className='text-center whitespace-nowrap'>
+                Team 2: &nbsp;&nbsp; {teamBScore}
                 </div>
               </div>
             </div>
@@ -919,9 +921,10 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
           </div> */}
 
           {/* push to whatever page is next */}
-          <div onClick={handlePlayAgain} className='flex justify-center py-16 cursor-pointer'>
-            <PlayAgainBtn />
-          </div>
+
+        </div>
+        <div onClick={handlePlayAgain} className='flex justify-center pt-4 cursor-pointer'>
+          <PlayAgainBtn />
         </div>
       </div>
     )

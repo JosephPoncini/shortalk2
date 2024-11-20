@@ -10,7 +10,7 @@ interface IReadyButton {
 
 const ReadyBtn = ( props: IReadyButton) => {
 
-    const classNameBase = ' rounded-2xl w-[200px] h-[100px] flex justify-center items-center px-4 ';
+    const classNameBase = 'rounded-lg sm:rounded-2xl w-[150px] h-[50px] sm:w-[200px] sm:h-[100px] flex justify-center items-center px-4 ';
 
 
     const [btnText, setBtnText] = useState<string>('')
@@ -29,7 +29,7 @@ const ReadyBtn = ( props: IReadyButton) => {
 
 
     return (
-        <div onClick={props.onClick} className={className + 'font-LuckiestGuy text-[30px]  text-white border cursor-pointer'}>
+        <div onClick={props.onClick} className={className + 'font-LuckiestGuy text-[20px] sm:text-[30px] text-white border cursor-pointer'}>
             <div className='bg-lblue bg-lgray bg-dblue'></div>
             {btnText}
         </div>

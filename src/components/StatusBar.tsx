@@ -79,12 +79,12 @@ const StatusBar = (props: IStatusBar) => {
 
 
   return (
-    <div className=' bg-status rounded-[20px] lg:px-10 px-5 py-[10px] font-Roboto text-textGray w-full h-[75px] flex justify-between items-center text-2xl cursor-default'>
-        {<div>Time: {currentTime}</div>}
+    <div className=' bg-status rounded-[20px] lg:px-10 px-5 py-[10px] font-Roboto text-textGray w-full sm:h-[75px] flex justify-between items-center text-[14px] sm:text-2xl cursor-default'>
+        {<div>{ currentTime}</div>}
         {props.user && <div className=' hidden md:block'>{"Player: " + props.user}</div>}        
         {props.role && <div className=' hidden md:block'>{"Role: " + props.role}</div>}
-        <div>Team A: {teamAScore} points</div>
-        <div>Team B: {teamBScore} points</div>
+        <div>Team 1: {teamAScore} </div>
+        <div>Team 2: {teamBScore} </div>
     </div>
   )
 }

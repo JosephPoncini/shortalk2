@@ -30,7 +30,7 @@ const StartBtn = (props: IStartButton) => {
 
 
   return (
-    <div onClick={props.onClick} className={`font-LuckiestGuy text-[30px] text-white border rounded-2xl w-[200px] h-[100px] flex justify-center items-center px-4 bg-dblue border-2 border-black ${ props.isLobbyReady ? 'cursor-pointer hover:bg-hblue active:text-dblue':'cursor-default opacity-[.5]'}`}>
+    <div onClick={props.onClick} className={`font-LuckiestGuy text-[20px] sm:text-[30px] text-white rounded-lg sm:rounded-2xl w-[150px] h-[50px] sm:w-[200px] sm:h-[100px] flex justify-center items-center px-4 bg-dblue border-2 border-black ${ props.isLobbyReady ? 'cursor-pointer hover:bg-hblue active:text-dblue':'cursor-default opacity-[.5]'}`}>
       <div className='bg-lblue bg-lgray bg-dblue'></div>
       Start
     </div>

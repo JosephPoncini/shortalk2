@@ -1,5 +1,5 @@
 import { LetterCircleH } from "@phosphor-icons/react/dist/ssr";
-import { ICardDto, ICheckPlayersReadiness, ITeams, ITeamsInfo, members } from "./interefaces";
+import { ICardDto, ICheckPlayersReadiness, IScoresDto, ITeams, ITeamsInfo, members } from "./interefaces";
 
 
 export const renderOptions = (minNum: number, maxNum: number, ifSeconds: boolean) => {
@@ -101,7 +101,7 @@ export const checkPlayersReadiness = (teamInfo: ITeamsInfo): ICheckPlayersReadin
     // Check if there are at least 4 players ready and if all but one player is ready
     const isReadyToStart = totalPlayers >= 4 && readyPlayersCount >= totalPlayers - 1 && Math.abs(totalPlayersOnTeam2 - totalPlayersOnTeam1) < 2;
 
-    const result:ICheckPlayersReadiness = {
+    const result: ICheckPlayersReadiness = {
         isReadyToStart: isReadyToStart,
         numOfPlayersReady: readyPlayersCount,
         numOfPlayers: totalPlayers
@@ -151,11 +151,10 @@ export const assignRoles = (teams: ITeams, turnNumber: number, username: string 
     })
 
     let round = 0;
-    if(teamAcount > teamBcount)
-    {
-        round = Math.ceil((turnNumber) / (2*teamAcount))
-    }else{
-        round = Math.ceil((turnNumber) / (2*teamBcount))       
+    if (teamAcount > teamBcount) {
+        round = Math.ceil((turnNumber) / (2 * teamAcount))
+    } else {
+        round = Math.ceil((turnNumber) / (2 * teamBcount))
     }
 
     teams.round = round;
@@ -165,29 +164,56 @@ export const assignRoles = (teams: ITeams, turnNumber: number, username: string 
 
 }
 
-export const parseString = (input:string) => {
-    if(input){
-    const pairs = input.slice(0, -1).split('-');
-    console.log("pairs: ")
-    console.log(pairs)
-    const result = pairs.map(pair => {
-        const [first, second] = pair.split('_');
-        const card:ICardDto = {
-            firstWord: first,
-            secondWord: second
-        }
-        return card;
-    });
-    console.log(result)
-    return result;        
+export const parseString = (input: string) => {
+    if (input) {
+        const pairs = input.slice(0, -1).split('-');
+        console.log("pairs: ")
+        console.log(pairs)
+        const result = pairs.map(pair => {
+            const [first, second] = pair.split('_');
+            const card: ICardDto = {
+                firstWord: first,
+                secondWord: second
+            }
+            return card;
+        });
+        console.log(result)
+        return result;
     }
     return [];
 }
 
 export function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
+}
 
-export const checkWin = (teamInfo: ITeamsInfo) => {
-    
+export const checkWin = (username: string, teamA: members[], scores: IScoresDto) => {
+    if (scores.teamAScore == scores.teamBScore) {
+        return 0;
+    }
+
+    if (scores.teamAScore > scores.teamBScore) {
+        for (const player of teamA) {
+            console.log("team A won");
+            if (player.name === username) {
+                console.log("found him");
+                console.log(player.name);
+                console.log(username);
+                return 1;
+            }
+        }
+        return -1; 
+    } else {
+        console.log("team B won");
+        for (const player of teamA) {
+            if (player.name === username) {
+                console.log("found him");
+                console.log(player.name);
+                console.log(username);
+                return -1; 
+            }
+        }
+        return 1; 
+    }
+
 }

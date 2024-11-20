@@ -122,14 +122,17 @@ export default function Home() {
     )
   } else {
     return (
-      <div className='h-screen flex flex-col justify-center align-middle mx-4 md:mx-16 space-y-10 '>
-        <div className='flex justify-center'>
-          <p className='text-dblue font-LuckiestGuy text-[48px] tracking-widest text-center cursor-default'>ShorTalk V2!!!</p>
+      <div className='h-screen flex flex-col justify-center align-middle mx-4 md:mx-16 space-y-6 '>
+        <div className='flex justify-center items-center flex-col sm:space-y-[-15px]'>
+          <p className='text-dblue font-LuckiestGuy text-[30px] sm:text-[48px] tracking-widest text-center cursor-default'>ShorTalk</p>
+          <p className='flex justify-center font-Roboto text-[12px] sm:text-[24px] text-center tracking-widest text-dgray cursor-default'>
+              version 2.0
+            </p>
         </div>
 
         <div className='flex justify-center'>
-          <div className='cardBorder bg-white w-[500px] h-[410px] rounded-lg flex flex-col justify-center space-y-5 pt-[24px]'>
-            <p className='flex justify-center font-LuckiestGuy text-[32px] text-center tracking-widest text-dgray cursor-default'>
+          <div className='cardBorder bg-white w-[500px] sm:h-[410px] rounded-lg flex flex-col justify-center space-y-3 pt-[24px]'>
+            <p className='flex justify-center font-LuckiestGuy text-[22px] sm:text-[32px] text-center tracking-widest text-dgray cursor-default'>
               Join or Create a Room!
             </p>
             <div className='flex flex-col space-y-5 items-center'>
@@ -151,12 +154,12 @@ export default function Home() {
 
               {/* On click create room */}
               <button onClick={() => handleOnClickJoin(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
-                <p className='sm:text-[36px] text-[28px] tracking-widest'>
+                <p className='sm:text-[36px] text-[24px] tracking-widest'>
                   JOIN
                 </p>
               </button>
               <button onClick={() => handleOnClickCreate(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
-                <p className='sm:text-[36px] text-[28px] tracking-widest'>
+                <p className='sm:text-[36px] text-[24px] tracking-widest'>
                   CREATE
                 </p>
               </button>
