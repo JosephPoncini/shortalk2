@@ -26,7 +26,7 @@ import { QuestionMark, Shield, UserSound } from '@phosphor-icons/react'
 import NextBtn from '@/components/NextBtn'
 
 
-const page = ({ params }: { params: { 'lobby-name': string } }) => {
+const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const url = 'http://localhost:5051/Game';
   const username = sessionStorage.getItem("Username");
@@ -937,4 +937,4 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
 
 }
 
-export default page
+export default Game

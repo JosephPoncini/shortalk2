@@ -5,7 +5,7 @@ import Image from "next/image";
 import { QuestionMark, Shield, UserSound } from '@phosphor-icons/react'
 import { useRouter, useSearchParams } from "next/navigation";
 
-const page = () => {
+const Rules = () => {
     const router = useRouter();
 
     const handleBack = () => {
@@ -35,5 +35,5 @@ const page = () => {
     )
 }
 
-export default page
+export default Rules
 
