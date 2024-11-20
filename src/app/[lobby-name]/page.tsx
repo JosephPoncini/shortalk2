@@ -889,7 +889,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     return (
       <div className='font-LuckiestGuy tracking-widest px-4 h-screen flex flex-col justify-center items-center space-y-5'>
         <div className='text-center pt-4 text-[25px] sm:text-[50px] text-dblue flex flex-col'>
-          {isWinning == 0 ? <div> It's A Tie</div>: isWinning == 1 ? <div> You Win !!!</div> : <div> You Lose !!!</div> }
+          {isWinning == 0 ? <div> It is A Tie</div>: isWinning == 1 ? <div> You Win !!!</div> : <div> You Lose !!!</div> }
           <p>Final Score</p>
         </div>
         <div className=' w-full'>

@@ -9,7 +9,7 @@ interface ICard {
 
 const Card = (props: { top: string, bottom: string, isGuessing: boolean, isAnimated: boolean }) => {
   return (
-    <div className={` ${props.isAnimated && 'barrelRoll'} w-[100px] h-[175px] sm:h-auto sm:w-[275px] flex flex-col justify-center rounded-xl border-2 border-black bg-dblue text-center py-2 sm:py-12`}>
+    <div className={` ${props.isAnimated && 'barrelRoll'} w-[100px] h-[175px] sm:h-[400px] sm:w-[275px] flex flex-col justify-center rounded-xl border-2 border-black bg-dblue text-center py-2 sm:py-12 relative sm:top-10`}>
       {props.isGuessing ?
         <div className='w-full'>
           <Image src={cardBack} alt='the back of the card'/>
