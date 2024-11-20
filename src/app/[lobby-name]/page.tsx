@@ -658,7 +658,7 @@ const page = ({ params }: { params: { 'lobby-name': string } }) => {
                     {renderOptions(0, maxSeconds, true)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedSeconds}</div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedSeconds < 10 ? '0'+selectedSeconds:selectedSeconds}</div>
               }
             </div>
           </div>

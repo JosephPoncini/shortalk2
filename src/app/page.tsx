@@ -5,6 +5,7 @@ import { removeSpaces } from "@/utils/utilities";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Info from '../assets/Info.png'
 
 export default function Home() {
 
@@ -20,6 +21,9 @@ export default function Home() {
   const [joinRoomWaiting, setJoinRoomWaiting] = useState<boolean>(false);
   const router = useRouter()
 
+  const handleInfoButton = () => {
+    router.push('/rules');
+  }
 
   useEffect(() => {
     if (room) {
@@ -82,6 +86,10 @@ export default function Home() {
         setWarnText('Please enter a room name.')
         setSuccessColor(false)
       }
+      else if (LobbyName === 'rules'){
+        setWarnText('Sorry you cannot use that lobby name');
+        setSuccessColor(false)
+      }
       else if (await checkIfRoomExists(LobbyName)) {
         setWarnText('Room name is already taken.')
         setSuccessColor(false)
@@ -131,7 +139,8 @@ export default function Home() {
         </div>
 
         <div className='flex justify-center'>
-          <div className='cardBorder bg-white w-[500px] sm:h-[410px] rounded-lg flex flex-col justify-center space-y-3 pt-[24px]'>
+
+          <div className='cardBorder bg-white w-[500px] sm:h-[410px] rounded-lg flex flex-col justify-center space-y-3 pt-[24px] relative'>
             <p className='flex justify-center font-LuckiestGuy text-[22px] sm:text-[32px] text-center tracking-widest text-dgray cursor-default'>
               Join or Create a Room!
             </p>
@@ -170,7 +179,13 @@ export default function Home() {
                 {warnText}
               </p>
             </div>
+
+            <div className=" absolute bottom-1 right-2">
+              <Image src={Info} onClick={handleInfoButton} className=" cursor-pointer" alt='info icon' width={25} height={25}></Image>
+            </div>
+
           </div>
+
         </div>
       </div>
     )
