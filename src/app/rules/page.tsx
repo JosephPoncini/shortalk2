@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from "next/image";
 import { QuestionMark, Shield, UserSound } from '@phosphor-icons/react'
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const Rules = () => {
     const router = useRouter();

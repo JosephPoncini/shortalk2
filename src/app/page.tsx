@@ -3,14 +3,13 @@ import GoHomeBtn from "@/components/GoHomeBtn";
 import { checkIfNameExistsInGame, checkIfRoomExists, createRoom, joinRoom } from "@/utils/dataServices";
 import { removeSpaces } from "@/utils/utilities";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Info from '../assets/Info.png'
 
-export default function Home() {
+export default function Home({ searchParams }: { searchParams: { room?: string } }) {
 
-  const searchParams = useSearchParams();
-  const room = searchParams.get('room');
+  const room = searchParams.room;;
 
   const [name, setName] = useState('')
   const [roomName, setRoomName] = useState('')
@@ -20,6 +19,7 @@ export default function Home() {
   const [createRoomWaiting, setCreateRoomWaiting] = useState<boolean>(false);
   const [joinRoomWaiting, setJoinRoomWaiting] = useState<boolean>(false);
   const router = useRouter()
+  
 
   const handleInfoButton = () => {
     router.push('/rules');
