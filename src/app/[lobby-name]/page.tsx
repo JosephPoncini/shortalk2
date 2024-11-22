@@ -751,7 +751,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the Card box */}
-          <div className=' sm:h-full sm:w-full space-y-4 row-start-2'>
+          <div className=' sm:h-full sm:w-full space-y-4 sm:space-y-0 sm:flex sm:flex-col sm:justify-between row-start-2'>
             <div className='flex justify-center sm:h-[85%]'>
               <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} isAnimated={doBarrelRoll} />
             </div>

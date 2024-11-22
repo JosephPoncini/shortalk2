@@ -50,7 +50,7 @@ const StatusBar = (props: IStatusBar) => {
       // console.log("time " + time)
       if(time < 0){
         setCurrentTime(0);
-        // props.onTimeOut();  
+        props.onTimeOut();  
       }else
       {
         setCurrentTime(time);        

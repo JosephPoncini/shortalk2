@@ -180,8 +180,8 @@ export default function Home({ searchParams }: { searchParams: { room?: string }
               </p>
             </div>
 
-            <div className=" absolute bottom-1 right-2">
-              <Image src={Info} onClick={handleInfoButton} className=" cursor-pointer" alt='info icon' width={25} height={25}></Image>
+            <div className=" absolute bottom-1 right-2 whitespace-nowrap text-dblue font-Roboto flex cursor-pointer" onClick={handleInfoButton}>
+              <div className=" relative top-[2px] mr-2">RULES</div> <Image src={Info}  alt='info icon' width={25} height={25}></Image>
             </div>
 
           </div>
