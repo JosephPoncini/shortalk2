@@ -1,7 +1,9 @@
 import { request } from "http";
 import { GameModel, IChangeGamePhaseRequest, IChangeNumOfRoundsRequest, IChangeTimeLimitRequest, ILobbyRequest, IReadyStatusRequest, IRemovePlayerRequest, ISubmitCardRequest } from "./interefaces";
 
-const url = 'http://localhost:5051/Game/';
+const url = 'https://shortalkv2back-fga6h0agabetdtb2.westus-01.azurewebsites.net/Game/';
+// const url = 'http://localhost:5151/Game/';
+
 
 export const createRoom = async (requestBody: ILobbyRequest) => {
     const promise = await fetch(url + 'createGame', {
@@ -33,6 +35,20 @@ export const checkIfRoomExists = async (roomName: string) => {
 
     return result
 }
+
+// export const checkIfRoomExists = async (roomName: string) => {
+//     const promise = await fetch(url + `CheckIfRoomExists/${roomName}`, {
+//         method: 'GET',
+//         headers: {
+//             'Content-Type': 'application/json', // Example header
+//             'Authorization': 'Bearer your-token-here', // Add your authorization token or other headers
+//         },
+//         credentials: 'include', // Include cookies and credentials with the request
+//     });
+    
+//     const result = await promise.json();
+//     return result;
+// }
 
 export const checkIfNameExistsInGame = async (roomName: string, username: string) => {
     const promise = await fetch(url + `CheckIfNameExistsInGame/${roomName}/${username}`)

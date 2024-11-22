@@ -28,7 +28,8 @@ import NextBtn from '@/components/NextBtn'
 
 const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
-  const url = 'http://localhost:5051/Game';
+  // const url = 'http://localhost:5151/Game';
+  const url = 'https://shortalkv2back-fga6h0agabetdtb2.westus-01.azurewebsites.net/Game/';
   const username = sessionStorage.getItem("Username");
   const isHost = sessionStorage.getItem("isHost");
   const lobby = params['lobby-name'];
