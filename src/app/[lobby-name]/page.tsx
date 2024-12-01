@@ -21,9 +21,10 @@ import { assignRoles, checkPlayersReadiness, checkWin, delay, extractTeam1member
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { time } from 'console'
 import { useRouter } from 'next/navigation'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, use } from 'react'
 import { QuestionMark, Shield, UserSound } from '@phosphor-icons/react'
 import NextBtn from '@/components/NextBtn'
+import { hostname } from 'os'
 
 
 const Game = ({ params }: { params: { 'lobby-name': string } }) => {
@@ -144,9 +145,9 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
   useEffect(() => {
     const changeBackEndStatus = async () => {
-      console.log(isReady);
+      // console.log(isReady);
       let msg = username && await setReadyStatus({ userName: username, roomName: lobby, isReady: isReady });
-      console.log(msg);
+      // console.log(msg);
       conn && username && RefreshTeams(conn, username, lobby, isReady ? "*is ready*" : "*is not ready*");
     }
 
@@ -154,21 +155,39 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   }, [isReady])
 
   useEffect(() => {
+
+    const onward = async () => {
+      let gameMode = await getGamePhaseByRoom(lobby);
+      if (gameMode != "lobby") {
+        let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+        console.log(msg);
+
+        let msg2 = await cleanSlate(lobby);
+        // console.log(msg2)
+
+        // conn && username && await RefreshCard(conn, username, lobby)
+        conn && username && await RefreshCard(conn, username, lobby, "")
+        conn && username && await GoToNextTurn(conn, username, lobby)
+        conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+      }
+    }
+
+    if (isHost == 'true' && numbOfPlayersReady == totalNumberOfPlayers) {
+      onward();
+    }
+
+  }, [numbOfPlayersReady])
+
+  useEffect(() => {
     setSpeakerBoxClicked(false);
     setGuessBoxClicked(false);
   }, [gamePhase])
-
-  // useEffect(()=>{
-  //   if(round > Number(selectedRounds)){
-  //     setGamePhase("endOfGame");
-  //   }
-  // },[round])
 
 
   // Handle Functions Lobby Room 
   const handleRemove = async (playerName: string) => {
     let msg = await removePlayer({ playerName: playerName, roomName: lobby });
-    console.log(msg)
+    // console.log(msg)
     conn && username && BanPlayer(conn, "admin", lobby, playerName);
     conn && username && RefreshTeams(conn, "admin", lobby, `removed ${playerName}`);
   }
@@ -176,7 +195,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   const handleShuffle = async () => {
     if (!isReady) {
       let msg = username && await shuffleTeams({ userName: username, roomName: lobby });
-      console.log(msg);
+      // console.log(msg);
       conn && username && RefreshTeams(conn, username, lobby, "shuffled");
     }
 
@@ -185,7 +204,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   const handleToggleTeam = async () => {
     if (!isReady) {
       let msg = username && await toggleTeamFetch({ userName: username, roomName: lobby });
-      console.log(msg);
+      // console.log(msg);
       conn && username && RefreshTeams(conn, username, lobby, "swapped teams");
     }
   }
@@ -194,7 +213,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     setSelectedRounds(e.target.value)
     const numOfRounds = parseInt(e.target.value);
     let msg = await changeNumberOfRounds({ roomName: lobby, numberOfRounds: numOfRounds })
-    console.log(msg);
+    // console.log(msg);
     conn && username && await RefreshRounds(conn, username, lobby, numOfRounds);
   }
 
@@ -202,7 +221,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     setSelectedSeconds(parseInt(e.target.value))
     const time = selectedMinutes * 60 + parseInt(e.target.value);
     let msg = await changeTimeLimit({ roomName: lobby, timeLimit: time })
-    console.log(msg);
+    // console.log(msg);
     conn && username && await RefreshTime(conn, username, lobby, time);
   }
 
@@ -210,7 +229,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     setSelectedMinutes(parseInt(e.target.value))
     const time = parseInt(e.target.value) * 60 + selectedSeconds;
     let msg = await changeTimeLimit({ roomName: lobby, timeLimit: time })
-    console.log(msg);
+    // console.log(msg);
     conn && username && await RefreshTime(conn, username, lobby, time);
   }
 
@@ -221,9 +240,9 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
       let msg2 = await cleanSlate(lobby);
       let msg3 = await cleanScore(lobby);
 
-      console.log(msg);
-      console.log(msg2);
-      console.log(msg3);
+      // console.log(msg);
+      // console.log(msg2);
+      // console.log(msg3);
 
       // conn && username && await RefreshCard(conn, username, lobby)
       conn && username && await RefreshCard(conn, username, lobby, "")
@@ -239,24 +258,26 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     // players figure out new roles
     // refresh Card
     const turn = await getTurnNumber(lobby)
-    console.log(isReady)
+    // console.log(isReady)
 
     if (gamePhase == "finalScoreBoard") {
       // let msg = username && await removePlayer({ playerName: username, roomName: lobby });
       setGamePhase("endOfGame")
-    } else if (isLobbyReady) {
-      let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
-      console.log(msg);
+    }
+    // else if (isLobbyReady) {
+    //   let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+    //   // console.log(msg);
 
-      let msg2 = await cleanSlate(lobby);
-      console.log(msg2)
+    //   let msg2 = await cleanSlate(lobby);
+    //   // console.log(msg2)
 
-      // conn && username && await RefreshCard(conn, username, lobby)
-      conn && username && await RefreshCard(conn, username, lobby, "")
-      conn && username && await GoToNextTurn(conn, username, lobby)
-      conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+    //   // conn && username && await RefreshCard(conn, username, lobby)
+    //   conn && username && await RefreshCard(conn, username, lobby, "")
+    //   conn && username && await GoToNextTurn(conn, username, lobby)
+    //   conn && username && await RefreshGamePhase(conn, username, lobby, "game")
 
-    } else {
+    // } 
+    else {
       setIsReady(true);
       setGamePhase("intermission")
     }
@@ -295,11 +316,11 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
       if (gamePhase == 'lastTurn') {
         let msg = await changeGamePhase({ roomName: lobby, gamePhase: "lobby" })
         let msg2 = await cleanLobby(lobby)
-        console.log(msg);
-        console.log(msg2);
+        // console.log(msg);
+        // console.log(msg2);
       } else {
         let msg = await changeGamePhase({ roomName: lobby, gamePhase: "scoreBoard" })
-        console.log(msg);
+        // console.log(msg);
       }
 
       // conn && username && await RefreshGamePhase(conn, username, lobby, "game")
@@ -314,11 +335,11 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     setThreePointWords(parseString(words.threePointWords));
     if (gamePhase == 'lastTurn') {
       const scores: IScoresDto = await getScores(lobby)
-      console.log(scores)
-      console.log(username)
-      console.log(team1members)
-      let winMode = username && checkWin(username,team1members,scores)
-      console.log(winMode)
+      // console.log(scores)
+      // console.log(username)
+      // console.log(team1members)
+      let winMode = username && checkWin(username, team1members, scores)
+      // console.log(winMode)
       winMode && setIsWinning(winMode)
       setGamePhase("finalScoreBoard")
     } else {
@@ -331,7 +352,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   //   // try {
   //   //   conn && await conn.invoke("TypeDescription", description);
   //   // } catch (e) {
-  //   //   console.log(e)
+  //   //   // console.log(e)
   //   // }
 
   // }
@@ -347,26 +368,26 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
   const handleSkip = async () => {
     let msg = await addSkippedWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
-    console.log(msg);
+    // console.log(msg);
 
     conn && username && await RefreshCard(conn, username, lobby, "skipped")
 
   }
   const handleBuzz = async () => {
     let msg = await addBuzzedWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
-    console.log(msg);
+    // console.log(msg);
 
     conn && username && await RefreshCard(conn, username, lobby, "buzzed")
   }
   const handleOnePoint = async () => {
     let msg = await addOnePointWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
-    console.log(msg);
+    // console.log(msg);
 
     conn && username && await RefreshCard(conn, username, lobby, "claimed 1 point")
   }
   const handleThreePoint = async () => {
     let msg = await addThreePointWord({ roomName: lobby, card: { firstWord: onePointWord, secondWord: threePointWord } })
-    console.log(msg);
+    // console.log(msg);
 
     conn && username && await RefreshCard(conn, username, lobby, "claimed 3 points")
   }
@@ -382,7 +403,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   const refreshTeams = async () => {
     let teamInfo = await getTeamMembersByRoom(lobby);
     let turn = await getTurnNumber(lobby)
-    // console.log(teamInfo)
+    // // console.log(teamInfo)
 
     const team1 = extractTeam1members(teamInfo);
     const team2 = extractTeam2members(teamInfo)
@@ -404,18 +425,34 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     setIsLobbyReady(playerReadiness.isReadyToStart)
     setNumOfPlayersReady(playerReadiness.numOfPlayersReady)
     setTotalNumberOfPlayers(playerReadiness.numOfPlayers);
+
+    console.log(playerReadiness.numOfPlayersReady);
+    console.log(playerReadiness.numOfPlayers);
+
+    // if(isHost == 'true' && playerReadiness.numOfPlayersReady == playerReadiness.numOfPlayers){
+    //   let msg = await changeGamePhase({ roomName: lobby, gamePhase: "game" })
+    //   console.log(msg);
+
+    //   let msg2 = await cleanSlate(lobby);
+    //   // console.log(msg2)
+
+    //   // conn && username && await RefreshCard(conn, username, lobby)
+    //   conn && username && await RefreshCard(conn, username, lobby, "")
+    //   conn && username && await GoToNextTurn(conn, username, lobby)
+    //   conn && username && await RefreshGamePhase(conn, username, lobby, "game")
+    // }
   }
 
   const refreshTime = async () => {
     let timeLimit = await getTimeLimitByRoom(lobby)
-    console.log(timeLimit)
+    // console.log(timeLimit)
     setSelectedMinutes(Math.floor(timeLimit / 60));
     setSelectedSeconds(timeLimit % 60);
   }
 
   const banPlayer = async (player: string) => {
-    console.log("This is the username: " + username)
-    console.log("This is the player being banned: " + player)
+    // console.log("This is the username: " + username)
+    // console.log("This is the player being banned: " + player)
     if (username == player) {
       sessionStorage.setItem("BannedRoom", lobby);
       sessionStorage.setItem("Username", "");
@@ -435,6 +472,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     let time = await getTimeLimitByRoom(lobby);
     setTimeLimit(time);
     setGamePhase(gameMode);
+    console.log(gameMode);
     if (gameMode != "lobby") {
       setIsReady(false);
     }
@@ -445,8 +483,8 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
     if (!doBarrelRoll) {
       setDoBarrelRoll(true)
       let card: ICardDto = await getCard(lobby);
-      console.log(card.firstWord);
-      console.log(card.secondWord);
+      // console.log(card.firstWord);
+      // console.log(card.secondWord);
       setOnePointWord(card.firstWord);
       setThreePointWord(card.secondWord);
       setOnePointWordHasBeenSaid(false);
@@ -471,7 +509,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   }
   // Join Room ( Initialize SignalR connection )
   const join = async () => {
-    console.log("We are joining room")
+    // console.log("We are joining room")
     try {
       const conn = new HubConnectionBuilder()
         .withUrl(url)
@@ -490,8 +528,8 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
       conn.on("SendMessage", (username: string, msg: string) => {
         setMessages(messages => [...messages, { username, msg }])
-        console.log("My messages");
-        console.log(messages);
+        // console.log("My messages");
+        // console.log(messages);
       })
 
       conn.on("RefreshTeams", (username: string, msg: string) => {
@@ -505,7 +543,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
       })
 
       conn.on("BanPlayer", (username: string, player: string) => {
-        console.log("We are banning a player")
+        // console.log("We are banning a player")
         banPlayer(player);
         // setMessages(messages => [...messages, { username, msg }])
       })
@@ -517,6 +555,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
       conn.on("RefreshGamePhase", (username: string, msg: string) => {
         refreshGamePhase();
+        console.log(message);
         setMessages(messages => [...messages, { username, msg }])
       })
 
@@ -534,7 +573,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
         } else if (msg == "claimed 3 points") {
           location += "threePointSound.wav"
         }
-        console.log(location);
+        // console.log(location);
         const audio = new Audio(location);
         audio.play();
         refreshCard();
@@ -551,7 +590,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
       conn.on("GoToNextTurn", (username: string, msg: string) => {
         refreshTeams();
-        console.log(msg)
+        // console.log(msg)
         // setMessages(messages => [...messages, { username, msg }])
       })
 
@@ -564,16 +603,22 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
         //retrieve if OnePointWordHasBeenSaid and if ThreePointWordHasBeenSaid
         refreshWordsSaidTracker();
         setGuesses(guesses => [...guesses, { username, guess, color }])
+
+        if (color == "green" || color == "purple") {
+          const audio = new Audio("/sounds/successSound.wav");
+          audio.play();
+        }
+
       })
 
       await conn.start();
       await conn.invoke("JoinSpecificGame", { Username: username, RoomName: lobby });
 
-      console.log(conn)
+      // console.log(conn)
       setConnection(conn);
-      console.log('success')
+      // console.log('success')
     } catch (e) {
-      console.log(e);
+      // console.log(e);
     }
   }
 
@@ -588,13 +633,13 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
         {/* Body */}
 
 
-        <div className='flex flex-col sm:flex-row justify-between mb-2'>
+        <div className='flex flex-col md:flex-row justify-between mb-2'>
 
           <OnlineTeamName teamName={"Team 1"} host={theHost} members={team1members} handleRemove={handleRemove} />
 
-          <div className='flex-col items-center sm:space-y-5 order-3 sm:order-1'>
+          <div className='flex-col items-center md:space-y-5 order-3 md:order-1'>
             <div className={`flex justify-center`}>
-              <button onClick={handleToggleTeam} className={`w-[100px] sm:w-[230px] h-[25px] sm:h-[50px] bg-dblue ${isReady ? 'opacity-[0.5] cursor-default' : ' hover:bg-hblue active:text-dblue'}  font-LuckiestGuy text-white text-[12px] sm:text-lg text-center tracking-wider rounded-md border border-black`}>
+              <button onClick={handleToggleTeam} className={`w-[100px] md:w-[230px] h-[25px] md:h-[50px] bg-dblue ${isReady ? 'opacity-[0.5] cursor-default' : ' hover:bg-hblue active:text-dblue'}  font-LuckiestGuy text-white text-[12px] md:text-lg text-center tracking-wider rounded-md border border-black`}>
                 Toggle Team
               </button>
             </div>
@@ -627,39 +672,39 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
 
         <div className=' flex flex-col items-center space-y-2'>
           <div className='flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
-            <div className=' font-LuckiestGuy text-dblue text-[20px] sm:text-3xl sm:text-start text-center'>Number of Rounds:</div>
+            <div className=' font-LuckiestGuy text-dblue text-[20px] md:text-3xl md:text-start text-center'>Number of Rounds:</div>
             <div className='flex justify-end'>
-              <div className=' text-lblue font-LuckiestGuy text-lg sm:text-3xl'>:</div>
+              <div className=' text-lblue font-LuckiestGuy text-lg md:text-3xl'>:</div>
               {
                 (isHost == 'true') ?
-                  <select value={selectedRounds} onChange={(e) => handleChangeRounds(e)} className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' name='Rounds' id='Rounds'>
+                  <select value={selectedRounds} onChange={(e) => handleChangeRounds(e)} className=' h-auto md:h-10 rounded-md text-[12px] md:text-lg' name='Rounds' id='Rounds'>
                     {renderOptions(1, maxRounds, false)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedRounds} </div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] md:text-3xl'>{selectedRounds} </div>
 
               }
             </div>
           </div>
           <div className='flex flex-row justify-between whitespace-nowrap items-center lg:w-[400px] w-[100%]'>
-            <div className=' font-LuckiestGuy text-dblue text-[20px] sm:text-3xl lg:text-start text-center'>Time Limit:</div>
+            <div className=' font-LuckiestGuy text-dblue text-[20px] md:text-3xl lg:text-start text-center'>Time Limit:</div>
             <div className='lg:w-[30%] w-[100%] flex justify-end space-x-3' >
               {
                 (isHost == 'true') ?
-                  <select className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' value={selectedMinutes} onChange={(e) => handleChangeTimeLimitMinutes(e)}>
+                  <select className=' h-auto md:h-10 rounded-md text-[12px] md:text-lg' value={selectedMinutes} onChange={(e) => handleChangeTimeLimitMinutes(e)}>
                     {renderOptions(0, maxMinutes, false)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedMinutes}</div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] md:text-3xl'>{selectedMinutes}</div>
               }
-              <div className=' text-dblue font-LuckiestGuy text-lg sm:text-3xl'>:</div>
+              <div className=' text-dblue font-LuckiestGuy text-lg md:text-3xl'>:</div>
               {
                 (isHost == 'true') ?
-                  <select className=' h-auto sm:h-10 rounded-md text-[12px] sm:text-lg' value={selectedSeconds} onChange={(e) => handleChangeTimeLimitSeconds(e)}>
+                  <select className=' h-auto md:h-10 rounded-md text-[12px] md:text-lg' value={selectedSeconds} onChange={(e) => handleChangeTimeLimitSeconds(e)}>
                     {renderOptions(0, maxSeconds, true)}
                   </select>
                   :
-                  <div className=' text-dblue font-LuckiestGuy text-[20px] sm:text-3xl'>{selectedSeconds < 10 ? '0'+selectedSeconds:selectedSeconds}</div>
+                  <div className=' text-dblue font-LuckiestGuy text-[20px] md:text-3xl'>{selectedSeconds < 10 ? '0' + selectedSeconds : selectedSeconds}</div>
               }
             </div>
           </div>
@@ -674,7 +719,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
           <StartBtn isReady={isReady} isHost={isHost == 'true'} onClick={() => { }} />
         </div> */}
 
-        <div className=' w-[95%] sm:w-[88%] h-[100px] sm:h-[224px] bg-lgray border-[#52576F] border-[10px] sm:border-[20px] md:p-4 p-2 '>
+        <div className=' w-[95%] md:w-[88%] h-[100px] md:h-[224px] bg-lgray border-[#52576F] border-[10px] md:border-[20px] md:p-4 p-2 '>
           <div className='h-[70%] overflow-y-auto flex flex-col-reverse'>
             <div>
               {
@@ -695,13 +740,13 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   else if (gamePhase == "game" || gamePhase == "lastTurn") {
     return (
 
-      <div className='flex flex-col h-[100vh] items-center'>
+      <div className='flex flex-col h-[100vh] items-center pb-5'>
 
         <div className='relative w-full'>
           <NavBar title={"Shortalk: " + params['lobby-name']} />
         </div>
 
-        <div className=' p-2 pt-3 sm:p-5 sm:pt-10 w-full'>
+        <div className=' p-2 px-5 md:p-5 md:pt-10 w-full order-2 md:order-1'>
           <StatusBar
             timeLimit={timeLimit}
             lobby={lobby}
@@ -712,24 +757,24 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
             setGettingScores={setGettingScores}
           />
         </div>
-        <div className='grid grid-cols-2 grid-rows-2 gap-2 sm:flex sm:justify-evenly sm:space-x-5 px-5 pb-5 w-full h-[600px] sm:h-[70vh]'>
+        <div className='order-1 md:order-2 grid grid-cols-2 grid-rows-2 gap-2 md:flex md:justify-evenly md:space-x-5 px-5 w-full h-[600px] md:h-[70vh]'>
 
           {/* This is the Guesser box */}
-          <div className='bg-white rounded-lg flex flex-col justify-between h-[250px] sm:h-full w-full row-start-2'>
+          <div className='bg-white rounded-lg flex flex-col justify-between h-[100%] md:h-full w-full row-start-2'>
 
             {/* Text from the guessers goes here */}
-            <div className=' pt-2 sm:pt-4 pb-2 sm:px-4 px-2 text-[12px] sm:text-[20px] w-full sm:max-h-[60vh]'>
+            <div className=' pt-2 md:pt-4 pb-2 md:px-4 px-2 text-[12px] md:text-[20px] w-full md:max-h-[60vh]'>
               <p className='border-black border-b'>Guesser Box</p>
               {/* <hr className='bg-black me-3' /> */}
               <div className=' text-green font-bold hidden'></div>
               <div className=' text-yellow font-bold hidden'></div>
               <div className=' text-purple font-bold hidden'></div>
               <div className=' text-mgray font-bold hidden'></div>
-              <div className=' overflow-y-auto flex flex-col-reverse h-full pb-4 mt-[-6px] sm:mt-0'>
+              <div className=' overflow-y-auto flex flex-col-reverse h-full pb-4 mt-[-6px] md:mt-0'>
                 {/* <div> */}
                 {
                   guesses.slice().reverse().map((guess, ix) => {
-                    console.log(guess.color);
+                    // console.log(guess.color);
                     return (
                       <p key={ix} className={`font-Roboto ${guess.color == 'dred' || guess.color == 'mgray' || guess.color == '' ? 'border-b-2' : 'border-none'}`}> <span className=' font-RobotoBold'>{guess.username}</span> {" - "} <span className={`${'text-' + guess.color}`}>{guess.guess}</span> </p>
                     )
@@ -743,16 +788,16 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
             </div>
             {
               role == 'guesser' &&
-              <div className={` h-[6%] mb-2 w-full sm:px-2 mt-4`}>
-                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[10px] sm:text-[20px] border sm:px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={() => setGuessBoxClicked(true)} />
+              <div className={` h-[6%] mb-2 w-full md:px-2 mt-4`}>
+                <input id='guesserBox' ref={inputRefGuesserBox} onChange={(e) => { setGuess(e.target.value) }} onKeyDown={handleKeyDownGuesserBox} type="text" placeholder='Type Your Guesses Here...' className={`rounded-md w-full text-[10px] md:text-[20px] border md:px-4 ${!guessBoxClicked && 'glow-effect'}`} onClick={() => setGuessBoxClicked(true)} />
               </div>
             }
 
           </div>
 
           {/* This is the Card box */}
-          <div className=' sm:h-full sm:w-full space-y-4 sm:space-y-0 sm:flex sm:flex-col sm:justify-between row-start-2'>
-            <div className='flex justify-center sm:h-[85%]'>
+          <div className=' md:h-full md:w-full space-y-4 md:space-y-0 md:flex md:flex-col md:justify-between row-start-2'>
+            <div className='flex justify-center md:h-[85%]'>
               <Card top={onePointWord} bottom={threePointWord} isGuessing={role == 'guesser'} isAnimated={doBarrelRoll} />
             </div>
             {
@@ -783,9 +828,9 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           {/* This is the speaker box */}
-          <div className=' flex flex-col-reverse sm:flex-col justify-between h-full w-full row-start-1 col-span-2'>
-            <div className={`bg-white rounded-lg flex flex-col justify-normal h-[180px] sm:h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'} ${(role == 'speaker') && 'h-[180px]'}`}>
-              <div className='pt-4 pb-2 ps-4 text-[12px] sm:text-[20px]'>
+          <div className=' flex flex-col-reverse md:flex-col justify-between h-full w-full row-start-1 col-span-2'>
+            <div className={`bg-white rounded-lg flex flex-col justify-normal h-[100%] md:h-[48%]  ${(!speakerBoxClicked && role == 'speaker') && 'glow-effect'} ${(role == 'speaker') && 'h-[180px]'}`}>
+              <div className='pt-4 pb-2 ps-4 text-[12px] md:text-[20px]'>
                 Speaker Box
               </div>
               <hr className='bg-black mx-3' />
@@ -793,12 +838,12 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
               {/* Text from the Speaker goes here */}
               {
 
-                <div className={`text-[12px] sm:text-[20px] h-full`}>
+                <div className={`text-[12px] md:text-[20px] h-full`}>
                   {
                     role == 'speaker' ?
-                      < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[12px] sm:text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
+                      < textarea ref={inputRefSpeakerBox} onChange={handleOnChange} style={{ resize: 'none' }} placeholder='Start Typing Description Here...' className={`border-0 w-[100%] h-full px-5 text-[12px] md:text-[20px] rounded-b-lg`} onClick={() => setSpeakerBoxClicked(true)} />
                       :
-                      < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[12px] sm:text-[20px] rounded-b-lg`} value={description} />
+                      < textarea readOnly disabled style={{ resize: 'none' }} className={`border-0 w-[100%] h-full px-5 text-[12px] md:text-[20px] rounded-b-lg`} value={description} />
                     // {/* <div className={`border-0 w-[100%] h-full px-5 text-[20px] rounded-b-lg break-all whitespace-pre-line`}>{description}</div> */}
 
 
@@ -807,11 +852,11 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
                 </div>
               }
             </div>
-            <div className=' bg-dblue rounded-lg flex items-center h-[100px] sm:h-[48%] sm:h-max-[300px] overflow-y-scroll'>
+            <div className=' hidden bg-dblue rounded-lg md:flex items-center h-[100px] md:h-[48%] md:h-max-[300px] overflow-y-scroll'>
               <div className=' bg-white w-full flex flex-col h-[90%]'>
-                <div className=' flex justify-center text-[12px] sm:text-[20px]'>Round {round}/{selectedRounds} </div>
+                <div className=' flex justify-center text-[12px] md:text-[20px]'>Round {round}/{selectedRounds} </div>
                 <div className=' flex justify-between'>
-                  <div className=' w-full text-center text-[12px] sm:text-[18px]'>
+                  <div className=' w-full text-center text-[12px] md:text-[18px]'>
                     <div className=' underline border-b-2 border-gray-50'>Team 1</div>
                     {
                       team1members.map(player => {
@@ -820,10 +865,10 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                                <div className=" w-4 sm:w-8"><UserSound size={32} /></div>
+                                <div className=" w-4 md:w-8"><UserSound size={32} /></div>
                                 : player.role == "guesser" ?
-                                  <div className=" w-4 sm:w-8"><QuestionMark size={32} /></div>
-                                  : <div className=" w-4 sm:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                                  <div className=" w-4 md:w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-4 md:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -832,7 +877,7 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
                       })
                     }
                   </div>
-                  <div className=' w-full text-center text-[12px] sm:text-[18px]'>
+                  <div className=' w-full text-center text-[12px] md:text-[18px]'>
                     <div className=' underline border-b-2 border-gray-50'>Team 2</div>
                     {
                       team2members.map(player => {
@@ -841,10 +886,10 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
                             <div className='  col-start-2 items-center'><div>{player.name}</div></div>
                             {
                               player.role == "speaker" ?
-                                <div className=" w-4 sm:w-8"><UserSound size={32} /></div>
+                                <div className=" w-4 md:w-8"><UserSound size={32} /></div>
                                 : player.role == "guesser" ?
-                                  <div className=" w-4 sm:w-8"><QuestionMark size={32} /></div>
-                                  : <div className=" w-4 sm:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                                  <div className=" w-4 md:w-8"><QuestionMark size={32} /></div>
+                                  : <div className=" w-4 md:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
                             }
 
                           </div>
@@ -858,13 +903,62 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
         </div>
+
+        <div className=' flex md:hidden bg-dblue rounded-lg items-center h-[100px] md:h-[48%] md:h-max-[300px]  order-3 w-[90%] '>
+          <div className=' bg-white w-full flex flex-col h-[90%] overflow-y-scroll'>
+            <div className=' flex justify-center text-[12px] md:text-[20px]'>Round {round}/{selectedRounds} </div>
+            <div className=' flex justify-between'>
+              <div className=' w-full text-center text-[12px] md:text-[18px]'>
+                <div className=' underline border-b-2 border-gray-50'>Team 1</div>
+                {
+                  team1members.map(player => {
+                    return (
+                      <div key={player.name} className='border-b-2 border-r-2 border-l-2 border-gray-50 grid grid-cols-3 items-center'>
+                        <div className='  col-start-2 items-center'><div>{player.name}</div></div>
+                        {
+                          player.role == "speaker" ?
+                            <div className=" w-4 md:w-8"><UserSound size={32} /></div>
+                            : player.role == "guesser" ?
+                              <div className=" w-4 md:w-8"><QuestionMark size={32} /></div>
+                              : <div className=" w-4 md:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                        }
+
+                      </div>
+
+                    )
+                  })
+                }
+              </div>
+              <div className=' w-full text-center text-[12px] md:text-[18px]'>
+                <div className=' underline border-b-2 border-gray-50'>Team 2</div>
+                {
+                  team2members.map(player => {
+                    return (
+                      <div key={player.name} className='border-b-2 border-r-2 border-gray-50 grid grid-cols-3 items-center'>
+                        <div className='  col-start-2 items-center'><div>{player.name}</div></div>
+                        {
+                          player.role == "speaker" ?
+                            <div className=" w-4 md:w-8"><UserSound size={32} /></div>
+                            : player.role == "guesser" ?
+                              <div className=" w-4 md:w-8"><QuestionMark size={32} /></div>
+                              : <div className=" w-4 md:w-8"><Shield size={32} color="#fa0505" weight="duotone" /></div>
+                        }
+
+                      </div>
+                    )
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
   else if (gamePhase == "scoreBoard" || gamePhase == "finalScoreBoard") {
     return (
-      <div className=' flex flex-col items-center justify-center space-y-3 sm:space-y-5 px-4'>
-        <div className='text-center text-dblue text-[25px] sm:text-[50px] font-LuckiestGuy tracking-widest'>
+      <div className=' flex flex-col items-center justify-center space-y-3 md:space-y-5 px-4'>
+        <div className='text-center text-dblue text-[25px] md:text-[50px] font-LuckiestGuy tracking-widest'>
           <p>Times Up!!!</p>
           <p className=''>Turn results</p>
         </div>
@@ -889,15 +983,15 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
   else if (gamePhase == "endOfGame") {
     return (
       <div className='font-LuckiestGuy tracking-widest px-4 h-screen flex flex-col justify-center items-center space-y-5'>
-        <div className='text-center pt-4 text-[25px] sm:text-[50px] text-dblue flex flex-col'>
-          {isWinning == 0 ? <div> It is A Tie</div>: isWinning == 1 ? <div> You Win !!!</div> : <div> You Lose !!!</div> }
+        <div className='text-center pt-4 text-[25px] md:text-[50px] text-dblue flex flex-col'>
+          {isWinning == 0 ? <div> It is A Tie</div> : isWinning == 1 ? <div> You Win !!!</div> : <div> You Lose !!!</div>}
           <p>Final Score</p>
         </div>
         <div className=' w-full'>
 
           <div className='flex justify-center'>
-            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] sm:text-[48px] sm:w-[60%] w-full'>
-              <div className='py-4 sm:py-10 w-[100%] px-4 sm:px-16 '>
+            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] md:text-[48px] md:w-[60%] w-full'>
+              <div className='py-4 md:py-10 w-[100%] px-4 md:px-16 '>
                 <div className='text-center whitespace-nowrap'>
                   Team 1: &nbsp;&nbsp; {teamAScore}
                 </div>
@@ -906,10 +1000,10 @@ const Game = ({ params }: { params: { 'lobby-name': string } }) => {
           </div>
 
           <div className='flex justify-center'>
-            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] sm:text-[48px] sm:w-[60%] w-full'>
-              <div className='py-4 sm:py-10 w-[100%] px-4 sm:px-16 '>
+            <div className='flex justify-center bg-white border-[1px] border-black text-[20px] md:text-[48px] md:w-[60%] w-full'>
+              <div className='py-4 md:py-10 w-[100%] px-4 md:px-16 '>
                 <div className='text-center whitespace-nowrap'>
-                Team 2: &nbsp;&nbsp; {teamBScore}
+                  Team 2: &nbsp;&nbsp; {teamBScore}
                 </div>
               </div>
             </div>
