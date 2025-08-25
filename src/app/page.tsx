@@ -130,64 +130,75 @@ export default function Home({ searchParams }: { searchParams: { room?: string }
     )
   } else {
     return (
-      <div className='h-screen flex flex-col justify-center align-middle mx-4 md:mx-16 space-y-6 '>
-        <div className='flex justify-center items-center flex-col sm:space-y-[-15px]'>
-          <p className='text-dblue font-LuckiestGuy text-[30px] sm:text-[48px] tracking-widest text-center cursor-default'>ShorTalk</p>
-          <p className='flex justify-center font-Roboto text-[12px] sm:text-[24px] text-center tracking-widest text-dgray cursor-default'>
-              version 2.0
-            </p>
-        </div>
+<div className="relative h-screen flex flex-col justify-center align-middle space-y-6">
+  {/* Overlay */}
+  <div className="absolute inset-0 bg-white/50 flex items-center justify-center pointer-events-none z-10">
+    <p className="text-red-600 font-bold text-6xl sm:text-8xl rotate-[-30deg]">
+      DECOMMISSIONED
+    </p>
+  </div>
 
-        <div className='flex justify-center'>
+  {/* Original Content */}
+  <div className="flex justify-center items-center flex-col sm:space-y-[-15px]">
+    <p className="text-dblue font-LuckiestGuy text-[30px] sm:text-[48px] tracking-widest text-center cursor-default">
+      ShorTalk
+    </p>
+    <p className="flex justify-center font-Roboto text-[12px] sm:text-[24px] text-center tracking-widest text-dgray cursor-default">
+      version 2.0
+    </p>
+  </div>
 
-          <div className='cardBorder bg-white w-[500px] sm:h-[410px] rounded-lg flex flex-col justify-center space-y-3 pt-[24px] relative'>
-            <p className='flex justify-center font-LuckiestGuy text-[22px] sm:text-[32px] text-center tracking-widest text-dgray cursor-default'>
-              Join or Create a Room!
-            </p>
-            <div className='flex flex-col space-y-5 items-center'>
-              <input
-                onChange={(e) => setName(e.target.value)}
-                type="text"
-                placeholder='Your Name'
-                className='w-[75%] h-10 border border-black px-2 rounded text-center'
-              />
-              <input
-                onChange={(e) => setRoomName(e.target.value)}
-                type="text"
-                placeholder='Room Name'
-                className='w-[75%] h-10 border border-black px-2 rounded text-center'
-                value={roomName}
-              />
-            </div>
-            <div className='flex flex-col  justify-center items-center space-y-5'>
-
-              {/* On click create room */}
-              <button onClick={() => handleOnClickJoin(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
-                <p className='sm:text-[36px] text-[24px] tracking-widest'>
-                  JOIN
-                </p>
-              </button>
-              <button onClick={() => handleOnClickCreate(removeSpaces(roomName), name)} className='font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md'>
-                <p className='sm:text-[36px] text-[24px] tracking-widest'>
-                  CREATE
-                </p>
-              </button>
-
-            </div>
-            <div className='text-center p-0 cursor-default h-[24px]'>
-              <p className={`${successColor ? 'text-green' : 'text-red-500'}`}>
-                {warnText}
-              </p>
-            </div>
-
-            <div className=" absolute bottom-1 right-2 whitespace-nowrap text-dblue font-Roboto flex cursor-pointer" onClick={handleInfoButton}>
-              <div className=" relative top-[2px] mr-2">RULES</div> <Image src={Info}  alt='info icon' width={25} height={25}></Image>
-            </div>
-
-          </div>
-
-        </div>
+  <div className="flex justify-center">
+    <div className="cardBorder bg-white w-[500px] sm:h-[410px] rounded-lg flex flex-col justify-center space-y-3 pt-[24px] relative">
+      <p className="flex justify-center font-LuckiestGuy text-[22px] sm:text-[32px] text-center tracking-widest text-dgray cursor-default">
+        Join or Create a Room!
+      </p>
+      <div className="flex flex-col space-y-5 items-center">
+        <input
+          onChange={(e) => setName(e.target.value)}
+          type="text"
+          placeholder="Your Name"
+          className="w-[75%] h-10 border border-black px-2 rounded text-center"
+        />
+        <input
+          onChange={(e) => setRoomName(e.target.value)}
+          type="text"
+          placeholder="Room Name"
+          className="w-[75%] h-10 border border-black px-2 rounded text-center"
+          value={roomName}
+        />
       </div>
+      <div className="flex flex-col justify-center items-center space-y-5">
+        <button
+          onClick={() => handleOnClickJoin(removeSpaces(roomName), name)}
+          className="font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md"
+        >
+          <p className="sm:text-[36px] text-[24px] tracking-widest">JOIN</p>
+        </button>
+        <button
+          onClick={() => handleOnClickCreate(removeSpaces(roomName), name)}
+          className="font-LuckiestGuy text-white active:text-dblue bg-dblue hover:bg-hblue w-[50%] h-[50px] p-0 m-0 rounded-md"
+        >
+          <p className="sm:text-[36px] text-[24px] tracking-widest">CREATE</p>
+        </button>
+      </div>
+      <div className="text-center p-0 cursor-default h-[24px]">
+        <p className={`${successColor ? "text-green" : "text-red-500"}`}>
+          {warnText}
+        </p>
+      </div>
+
+      <div
+        className="absolute bottom-1 right-2 whitespace-nowrap text-dblue font-Roboto flex cursor-pointer"
+        onClick={handleInfoButton}
+      >
+        <div className="relative top-[2px] mr-2">RULES</div>
+        <Image src={Info} alt="info icon" width={25} height={25} />
+      </div>
+    </div>
+  </div>
+</div>
+
     )
   }
 
